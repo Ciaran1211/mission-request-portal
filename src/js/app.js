@@ -1,5 +1,6 @@
 // Main Application JavaScript
 // Handles form logic, validation, file uploads, and API submission
+// Communicates with map widget iframe via postMessage
 
 (function() {
     'use strict';
@@ -7,40 +8,24 @@
     // ============================================================
     // COMPANY AND SITE CONFIGURATION
     // ============================================================
-    // This configuration maps companies to their sites and site areas
-    // The map widget will update based on selected site
+    // Site keys must match the SITES config in map-widget.html
     
     const COMPANY_CONFIG = {
         'BMA': {
             name: 'BMA',
             displayName: 'BHP Mitsubishi Alliance',
             sites: {
-                'Saraji': {
+                'saraji': {
                     name: 'Saraji',
-                    areas: ['6E', '6W', '4E', '4W', '2E', '2W', '1E', '1W', '13E', '15W', '15E', '14W', '14E', '13W', '8W', '8E', '12W', '12E', '9W', '9E', '16W', '16E'],
-                    mapConfig: {
-                        center: [148.30, -22.42],
-                        defaultZoom: 15,
-                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/saraji/{z}/{x}/{y}.png'
-                    }
+                    areas: ['6W', '8W', '10W', '12W', 'Saraji East', 'Processing Plant', 'Stockpile Area']
                 },
-                'Goonyella': {
+                'goonyella': {
                     name: 'Goonyella',
-                    areas: ['North Pit', 'South Pit', 'East Pit', 'CHPP', 'Rail Loop'],
-                    mapConfig: {
-                        center: [147.97, -21.74],
-                        defaultZoom: 15,
-                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/goonyella/{z}/{x}/{y}.png'
-                    }
+                    areas: ['North Pit', 'South Pit', 'East Pit', 'CHPP', 'Rail Loop']
                 },
-                'Peak Downs': {
+                'peak-downs': {
                     name: 'Peak Downs',
-                    areas: ['3N_E', '3N_W', '5N_E', '5N_W', '6N_E', '7N_E', '6N_W', '7N_W', '1S_E', '1S_W', '2S_E', '2S_W', '1N_W', '1N_E', '4S_E', '4S_W', '2N_W', '2N_E', '5S_E', '5S_W', '9S_E', '11S_E', '9S_W', '11S_W'],
-                    mapConfig: {
-                        center: [148.19, -22.26],
-                        defaultZoom: 15,
-                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/peak-downs/{z}/{x}/{y}.png'
-                    }
+                    areas: ['Main Pit', 'Extension', 'Haul Road', 'Processing']
                 }
             }
         },
@@ -48,15 +33,56 @@
             name: 'Goldfields',
             displayName: 'Goldfields',
             sites: {
-                'Gruyere': {
-                    name: 'Gruyere',
-                    areas: ['Pit', 'ROM', 'TSF', 'WD 01', 'WD 02-03', 'WD 04-05', 'WD 06', 'Plant / MACA', 'Solar Farm', 'NE Outer', 'SE Outer', 'SW Outer', 'Multiple Locations'],
-                    mapConfig: {
-                        center: [123.8552,-27.9897],
-                        defaultZoom: 15,
-                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/gruyere/{z}/{x}/{y}.png'
-                    }
+                'st-ives': {
+                    name: 'St Ives',
+                    areas: ['Invincible', 'Hamlet', 'Neptune', 'Athena', 'Processing']
                 },
+                'gruyere': {
+                    name: 'Gruyere',
+                    areas: ['Open Pit', 'Stage 1', 'Stage 2', 'Processing Plant', 'TSF']
+                },
+                'agnew': {
+                    name: 'Agnew',
+                    areas: ['Kim Pit', 'Waroonga', 'Mill', 'Tailings']
+                }
+            }
+        },
+        'RioTinto': {
+            name: 'RioTinto',
+            displayName: 'Rio Tinto',
+            sites: {
+                'tom-price': {
+                    name: 'Tom Price',
+                    areas: ['North Deposit', 'South Deposit', 'Section 7', 'Processing', 'Rail']
+                },
+                'paraburdoo': {
+                    name: 'Paraburdoo',
+                    areas: ['Eastern Range', '4 East', 'Channar', 'Processing']
+                }
+            }
+        },
+        'FMG': {
+            name: 'FMG',
+            displayName: 'Fortescue Metals Group',
+            sites: {
+                'christmas-creek': {
+                    name: 'Christmas Creek',
+                    areas: ['Cloudbreak West', 'Eastern Hub', 'Central', 'Processing', 'Rail']
+                },
+                'solomon': {
+                    name: 'Solomon',
+                    areas: ['Kings Valley', 'Firetail', 'Queens Valley', 'Infrastructure']
+                }
+            }
+        },
+        'Norton': {
+            name: 'Norton',
+            displayName: 'Norton Gold Fields',
+            sites: {
+                'binduli-north': {
+                    name: 'Binduli North',
+                    areas: ['Main Pit', 'North Extension', 'ROM Pad', 'Haul Road']
+                }
             }
         }
     };
@@ -66,8 +92,50 @@
     // ============================================================
     let currentCompany = null;
     let currentSite = null;
+    let currentKmlData = '';
     let uploadedFiles = [];
     let isSubmitting = false;
+    let mapWidgetReady = false;
+
+    // ============================================================
+    // IFRAME COMMUNICATION
+    // ============================================================
+    function getMapFrame() {
+        return document.getElementById('mapWidgetFrame');
+    }
+
+    function sendToMapWidget(type, data = {}) {
+        const frame = getMapFrame();
+        if (frame && frame.contentWindow) {
+            frame.contentWindow.postMessage(JSON.stringify({ type, ...data }), '*');
+        }
+    }
+
+    function setupMapWidgetListener() {
+        window.addEventListener('message', function(e) {
+            try {
+                const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+                
+                // Handle KML data from widget
+                if (data.type === 'kmlData') {
+                    currentKmlData = data.kml || '';
+                    document.getElementById('kmlData').value = currentKmlData;
+                }
+                
+                // Handle widget ready notification
+                if (data.type === 'widgetReady') {
+                    mapWidgetReady = true;
+                    // If a site is already selected, send it to the widget
+                    const siteSelect = document.getElementById('siteSelection');
+                    if (siteSelect && siteSelect.value) {
+                        sendToMapWidget('changeSite', { site: siteSelect.value });
+                    }
+                }
+            } catch (err) {
+                // Ignore parse errors
+            }
+        });
+    }
 
     // ============================================================
     // INITIALIZATION
@@ -91,6 +159,7 @@
         
         // Setup event listeners
         setupEventListeners();
+        setupMapWidgetListener();
         setDefaultDate();
     }
 
@@ -134,7 +203,7 @@
     // EVENT LISTENERS
     // ============================================================
     function setupEventListeners() {
-        // Site selection change - updates areas and map
+        // Site selection change - updates areas and map widget
         document.getElementById('siteSelection').addEventListener('change', handleSiteChange);
 
         // Custom parameters toggle
@@ -160,17 +229,10 @@
         // Update site areas dropdown
         populateSiteAreas(siteKey);
         
-        // Update map widget
-        if (siteKey && currentCompany.sites[siteKey]) {
+        // Send site change to map widget
+        if (siteKey) {
             currentSite = currentCompany.sites[siteKey];
-            const mapConfig = currentSite.mapConfig;
-            
-            // Initialize or update map
-            if (!window.MapWidget.isInitialized()) {
-                window.MapWidget.init(mapConfig);
-            } else {
-                window.MapWidget.updateSite(mapConfig);
-            }
+            sendToMapWidget('changeSite', { site: siteKey });
         }
     }
 
@@ -344,14 +406,15 @@
         const form = document.getElementById('missionForm');
         const frequencyType = document.querySelector('input[name="frequencyType"]:checked').value;
         const isRepeating = frequencyType === 'Repeating';
-        const kmlData = window.MapWidget.generateKML();
         const dateFormatted = formatDateYYMMDD(form.missionDate.value);
+        const siteName = currentSite ? currentSite.name : form.siteSelection.value;
 
         const data = {
             // Company & Site
             company: currentCompany.name,
             companyDisplayName: currentCompany.displayName,
-            site: form.siteSelection.value,
+            site: siteName,
+            siteKey: form.siteSelection.value,
             siteArea: form.siteArea.value,
             
             // Mission Details
@@ -381,11 +444,11 @@
             submitterEmail: form.submitterEmail.value,
             contactNumber: form.contactNumber.value,
             
-            // KML Data
-            kmlData: kmlData,
+            // KML Data (from map widget via postMessage)
+            kmlData: currentKmlData,
             
             // Generated title
-            title: `${dateFormatted} ${currentCompany.name} ${form.siteSelection.value} ${form.siteArea.value} ${form.missionName.value}`.trim(),
+            title: `${dateFormatted} ${currentCompany.name} ${siteName} ${form.siteArea.value} ${form.missionName.value}`.trim(),
             
             // Files
             files: uploadedFiles,
