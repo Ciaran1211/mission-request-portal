@@ -627,6 +627,205 @@ input[type="radio"]:checked + .toggle-option svg {
     background: var(--blue-mid);
 }
 
+/* Priority Help Text - Tooltip Style */
+.priority-help-container {
+    margin-top: 8px;
+    position: relative;
+    width: 100%;
+}
+
+.priority-help-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--cyan);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.priority-help-button:hover {
+    background: rgba(10, 186, 239, 0.1);
+    color: var(--navy);
+}
+
+.priority-help-button svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.priority-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-width: 380px;
+    background: var(--white);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--gray-200);
+    z-index: 50;
+    margin-top: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.priority-tooltip.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.priority-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 20px;
+    width: 12px;
+    height: 12px;
+    background: var(--white);
+    transform: rotate(45deg);
+    border-left: 1px solid var(--gray-200);
+    border-top: 1px solid var(--gray-200);
+}
+
+.priority-guidelines {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.guideline-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.guideline-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.priority-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.priority-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+}
+
+.priority-1 {
+    background-color: var(--red);
+}
+
+.priority-2 {
+    background-color: var(--orange);
+}
+
+.priority-3 {
+    background-color: var(--yellow);
+    color: var(--navy);
+}
+
+.priority-4 {
+    background-color: var(--green);
+}
+
+.priority-5 {
+    background-color: var(--cyan);
+}
+
+.priority-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+}
+
+.priority-description {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--gray-600);
+    margin: 0;
+}
+
+.priority-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(10, 186, 239, 0.08);
+    border-radius: var(--radius-sm);
+    margin-top: 4px;
+}
+
+.priority-tip svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--cyan);
+}
+
+.priority-tip-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--navy);
+    margin: 0;
+}
+
+/* Priority dropdown styling */
+#missionPriority option[value="1"] {
+    background-color: var(--white);
+    color: var(--red);
+    font-weight: 600;
+}
+
+#missionPriority option[value="2"] {
+    background-color: var(--white);
+    color: var(--orange);
+    font-weight: 600;
+}
+
+#missionPriority option[value="3"] {
+    background-color: var(--white);
+    color: var(--navy);
+    font-weight: 600;
+}
+
+#missionPriority option[value="4"] {
+    background-color: var(--white);
+    color: var(--green);
+    font-weight: 600;
+}
+
+#missionPriority option[value="5"] {
+    background-color: var(--white);
+    color: var(--cyan);
+    font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     .main-content {
@@ -667,5 +866,19 @@ input[type="radio"]:checked + .toggle-option svg {
     
     .error-card {
         padding: 40px 24px;
+    }
+    
+    .priority-tooltip {
+        position: fixed;
+        top: auto;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        max-width: none;
+        margin: 0;
+    }
+    
+    .priority-tooltip::before {
+        display: none;
     }
 }

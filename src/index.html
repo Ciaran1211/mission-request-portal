@@ -105,6 +105,81 @@
                                 <option value="Progress Monitoring">Progress Monitoring</option>
                             </select>
                         </div>
+
+                        <div class="form-group">
+            <label for="missionPriority">Mission Priority *</label>
+            <select id="missionPriority" name="missionPriority" required>
+                <option value="">Select priority...</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+            
+            <!-- Priority Help Button & Tooltip -->
+            <div class="priority-help-container">
+                <button type="button" class="priority-help-button" id="priorityHelpButton">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                    Show priority breakdown
+                </button>
+                
+                <div class="priority-tooltip" id="priorityTooltip">
+                    <div class="priority-guidelines">
+                        <div class="guideline-item">
+                            <div class="priority-header">
+                                <span class="priority-badge priority-1">1</span>
+                                <span class="priority-title">Critical - Within 30 minutes</span>
+                            </div>
+                            <p class="priority-description">Urgent missions required ASAP for operational reasons or time-dependent missions (e.g., blast surveys, emergency response).</p>
+                        </div>
+                        
+                        <div class="guideline-item">
+                            <div class="priority-header">
+                                <span class="priority-badge priority-2">2</span>
+                                <span class="priority-title">High - Within 4 hours</span>
+                            </div>
+                            <p class="priority-description">To be completed within 4 hours. Add time requirement in comments (e.g., Daily panoramic flights, semi-urgent unscheduled jobs).</p>
+                        </div>
+                        
+                        <div class="guideline-item">
+                            <div class="priority-header">
+                                <span class="priority-badge priority-3">3</span>
+                                <span class="priority-title">Medium - Before 13:00</span>
+                            </div>
+                            <p class="priority-description">Ideally complete before 13:00. For survey flights that require processing due that day.</p>
+                        </div>
+                        
+                        <div class="guideline-item">
+                            <div class="priority-header">
+                                <span class="priority-badge priority-4">4</span>
+                                <span class="priority-title">Low - By end of day</span>
+                            </div>
+                            <p class="priority-description">Can be completed by end of day. Standard missions without same-day processing requirements.</p>
+                        </div>
+                        
+                        <div class="guideline-item">
+                            <div class="priority-header">
+                                <span class="priority-badge priority-5">5</span>
+                                <span class="priority-title">Flexible - Next day</span>
+                            </div>
+                            <p class="priority-description">Not urgent. Can be completed the next day. For planning and non-time-sensitive missions.</p>
+                        </div>
+                        
+                        <div class="priority-tip">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 16v-4M12 8h.01"/>
+                            </svg>
+                            <p class="priority-tip-text">When selecting Priority 2, please specify the required completion time in the mission description.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
                         
                         <div class="form-group full-width">
                             <label for="customerComment">Description</label>
@@ -202,31 +277,21 @@
                 </section>
 
                 <!-- Section 4: Schedule -->
-                <section class="form-section">
-                    <h2 class="section-title">
-                        <span class="section-number">4</span>
-                        Schedule
-                    </h2>
-                    
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="missionDate">Scheduled Date *</label>
-                            <input type="date" id="missionDate" name="missionDate" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="missionPriority">Mission Priority *</label>
-                            <select id="missionPriority" name="missionPriority" required>
-                                <option value="">Select priority...</option>
-                                <option value="1">1 - Critical (Same Day)</option>
-                                <option value="2">2 - High (Within 2 Days)</option>
-                                <option value="3" selected>3 - Medium (Within Week)</option>
-                                <option value="4">4 - Low (When Available)</option>
-                                <option value="5">5 - Flexible (No Rush)</option>
-                            </select>
-                        </div>
-                    </div>
-                </section>
+<section class="form-section">
+    <h2 class="section-title">
+        <span class="section-number">4</span>
+        Schedule
+    </h2>
+    
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="missionDate">Scheduled Date *</label>
+            <input type="date" id="missionDate" name="missionDate" required>
+        </div>
+        
+        
+    </div>
+</section>
 
                 <!-- Section 5: Contact -->
                 <section class="form-section">
