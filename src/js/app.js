@@ -15,17 +15,32 @@
             name: 'BMA',
             displayName: 'BHP Mitsubishi Alliance',
             sites: {
-                'saraji': {
+                'Saraji': {
                     name: 'Saraji',
-                    areas: ['6W', '8W', '10W', '12W', 'Saraji East', 'Processing Plant', 'Stockpile Area']
+                    areas: ['6E', '6W', '4E', '4W', '2E', '2W', '1E', '1W', '13E', '15W', '15E', '14W', '14E', '13W', '8W', '8E', '12W', '12E', '9W', '9E', '16W', '16E'],
+                    mapConfig: {
+                        center: [148.30, -22.42],
+                        defaultZoom: 15,
+                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/saraji/{z}/{x}/{y}.png'
+                    }
                 },
-                'goonyella': {
+                'Goonyella': {
                     name: 'Goonyella',
-                    areas: ['North Pit', 'South Pit', 'East Pit', 'CHPP', 'Rail Loop']
+                    areas: ['North Pit', 'South Pit', 'East Pit', 'CHPP', 'Rail Loop'],
+                    mapConfig: {
+                        center: [147.97, -21.74],
+                        defaultZoom: 15,
+                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/goonyella/{z}/{x}/{y}.png'
+                    }
                 },
-                'peak-downs': {
+                'Peak Downs': {
                     name: 'Peak Downs',
-                    areas: ['Main Pit', 'Extension', 'Haul Road', 'Processing']
+                    areas: ['3N_E', '3N_W', '5N_E', '5N_W', '6N_E', '7N_E', '6N_W', '7N_W', '1S_E', '1S_W', '2S_E', '2S_W', '1N_W', '1N_E', '4S_E', '4S_W', '2N_W', '2N_E', '5S_E', '5S_W', '9S_E', '11S_E', '9S_W', '11S_W'],
+                    mapConfig: {
+                        center: [148.19, -22.26],
+                        defaultZoom: 15,
+                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/peak-downs/{z}/{x}/{y}.png'
+                    }
                 }
             }
         },
@@ -33,56 +48,15 @@
             name: 'Goldfields',
             displayName: 'Goldfields',
             sites: {
-                'st-ives': {
-                    name: 'St Ives',
-                    areas: ['Invincible', 'Hamlet', 'Neptune', 'Athena', 'Processing']
-                },
-                'gruyere': {
+                'Gruyere': {
                     name: 'Gruyere',
-                    areas: ['Open Pit', 'Stage 1', 'Stage 2', 'Processing Plant', 'TSF']
+                    areas: ['Pit', 'ROM', 'TSF', 'WD 01', 'WD 02-03', 'WD 04-05', 'WD 06', 'Plant / MACA', 'Solar Farm', 'NE Outer', 'SE Outer', 'SW Outer', 'Multiple Locations'],
+                    mapConfig: {
+                        center: [123.8552,-27.9897],
+                        defaultZoom: 15,
+                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/gruyere/{z}/{x}/{y}.png'
+                    }
                 },
-                'agnew': {
-                    name: 'Agnew',
-                    areas: ['Kim Pit', 'Waroonga', 'Mill', 'Tailings']
-                }
-            }
-        },
-        'RioTinto': {
-            name: 'RioTinto',
-            displayName: 'Rio Tinto',
-            sites: {
-                'tom-price': {
-                    name: 'Tom Price',
-                    areas: ['North Deposit', 'South Deposit', 'Section 7', 'Processing', 'Rail']
-                },
-                'paraburdoo': {
-                    name: 'Paraburdoo',
-                    areas: ['Eastern Range', '4 East', 'Channar', 'Processing']
-                }
-            }
-        },
-        'FMG': {
-            name: 'FMG',
-            displayName: 'Fortescue Metals Group',
-            sites: {
-                'christmas-creek': {
-                    name: 'Christmas Creek',
-                    areas: ['Cloudbreak West', 'Eastern Hub', 'Central', 'Processing', 'Rail']
-                },
-                'solomon': {
-                    name: 'Solomon',
-                    areas: ['Kings Valley', 'Firetail', 'Queens Valley', 'Infrastructure']
-                }
-            }
-        },
-        'Norton': {
-            name: 'Norton',
-            displayName: 'Norton Gold Fields',
-            sites: {
-                'binduli-north': {
-                    name: 'Binduli North',
-                    areas: ['Main Pit', 'North Extension', 'ROM Pad', 'Haul Road']
-                }
             }
         }
     };
