@@ -75,44 +75,90 @@
                         
                         <div class="map-toolbar">
                             <div class="toolbar-group">
-                                <button type="button" class="tool-btn" data-tool="Polygon">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M12 2l9 4.5v11L12 22l-9-4.5v-11L12 2z"/>
-                                    </svg>
+                                <button type="button" class="tool-btn" data-tool="Polygon" title="Draw Polygon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/></svg>
                                     Polygon
                                 </button>
-                                <button type="button" class="tool-btn" data-tool="Box">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                                    </svg>
+                                <button type="button" class="tool-btn" data-tool="Box" title="Draw Rectangle">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
                                     Rectangle
                                 </button>
+                                <button type="button" class="tool-btn" data-tool="Circle" title="Draw Circle">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+                                    Circle
+                                </button>
                             </div>
+                            
                             <div class="toolbar-group">
-                                <button type="button" class="tool-btn" id="undoBtn">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M3 7v6h6M3 13a9 9 0 1 0 2.5-6.5L3 9"/>
-                                    </svg>
+                                <button type="button" class="tool-btn" data-tool="LineString" title="Draw Line">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20L20 4"/><circle cx="4" cy="20" r="2" fill="currentColor"/><circle cx="20" cy="4" r="2" fill="currentColor"/></svg>
+                                    Line
+                                </button>
+                                <button type="button" class="tool-btn" data-tool="Point" title="Place Point">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="8"/></svg>
+                                    Point
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-group">
+                                <button type="button" class="tool-btn" id="undoBtn" title="Undo Last">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>
                                     Undo
                                 </button>
-                                <button type="button" class="tool-btn danger" id="clearBtn">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                                    </svg>
+                                <button type="button" class="tool-btn danger" id="clearBtn" title="Clear All">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                                     Clear
                                 </button>
                             </div>
+
                             <div class="toolbar-group">
-                                <button type="button" class="layer-btn active" data-layer="ortho">Ortho</button>
-                                <button type="button" class="layer-btn" data-layer="satellite">Satellite</button>
+                                <button type="button" class="tool-btn success" id="downloadBtn" title="Download KML">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    KML
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-group layer-selector">
                                 <button type="button" class="layer-btn" data-layer="osm">Street</button>
+                                <button type="button" class="layer-btn" data-layer="satellite">Sat</button>
+                                <button type="button" class="layer-btn active" data-layer="ortho">Ortho</button>
                             </div>
                         </div>
                         
                         <div class="map-container">
                             <div id="map"></div>
+                            <div class="map-controls">
+                                <button type="button" class="fs-toggle-btn" id="fullscreenToggle" title="Toggle Fullscreen">
+                                    <svg id="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                                    </svg>
+                                    <svg id="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="display:none">
+                                        <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+                                    </svg>
+                                </button>
+                            </div>
                             <div class="map-overlay">
-                                <span id="featureCount">0</span> area(s) drawn
+                                Features: <span id="featureCount">0</span>
+                            </div>
+                        </div>
+                        
+                        <div class="map-status-bar">
+                            <div class="status-info">
+                                <span class="status-dot ready" id="statusDot"></span>
+                                <span id="statusText">Ready</span>
+                            </div>
+                            <span class="coord-display" id="coordDisplay">--</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Modal -->
+                    <div class="map-modal-overlay" id="mapModal">
+                        <div class="map-modal-box">
+                            <div class="map-modal-title" id="mapModalTitle">Title</div>
+                            <div class="map-modal-message" id="mapModalMessage">Message</div>
+                            <div class="map-modal-buttons">
+                                <button type="button" class="map-modal-btn cancel" id="mapModalCancel">Cancel</button>
+                                <button type="button" class="map-modal-btn primary" id="mapModalConfirm">Confirm</button>
                             </div>
                         </div>
                     </div>
