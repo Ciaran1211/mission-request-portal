@@ -19,18 +19,18 @@
                     name: 'Saraji',
                     areas: ['6W', '8W', '10W', '12W', 'Saraji East', 'Processing Plant', 'Stockpile Area'],
                     mapConfig: {
-                        center: [148.2875, -22.40],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                        center: [148.30, -22.42],
+                        defaultZoom: 15,
+                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/saraji/{z}/{x}/{y}.png'
                     }
                 },
                 'Goonyella': {
                     name: 'Goonyella',
                     areas: ['North Pit', 'South Pit', 'East Pit', 'CHPP', 'Rail Loop'],
                     mapConfig: {
-                        center: [148.12, -21.82],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                        center: [147.97, -21.74],
+                        defaultZoom: 15,
+                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/goonyella/{z}/{x}/{y}.png'
                     }
                 },
                 'Peak Downs': {
@@ -38,8 +38,8 @@
                     areas: ['Main Pit', 'Extension', 'Haul Road', 'Processing'],
                     mapConfig: {
                         center: [148.19, -22.26],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                        defaultZoom: 15,
+                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/peak-downs/{z}/{x}/{y}.png'
                     }
                 }
             }
@@ -48,99 +48,15 @@
             name: 'Goldfields',
             displayName: 'Goldfields',
             sites: {
-                'St Ives': {
-                    name: 'St Ives',
+                'Gruyere': {
+                    name: 'Gruyere',
                     areas: ['Invincible', 'Hamlet', 'Neptune', 'Athena', 'Processing'],
                     mapConfig: {
-                        center: [121.67, -31.22],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                        center: [123.8552,-27.9897],
+                        defaultZoom: 15,
+                        orthoUrl: 'https://s3-map-tiles.s3.ap-southeast-2.amazonaws.com/sites/gruyere/{z}/{x}/{y}.png'
                     }
                 },
-                'Granny Smith': {
-                    name: 'Granny Smith',
-                    areas: ['Open Pit', 'Underground Portal', 'Processing Plant', 'TSF'],
-                    mapConfig: {
-                        center: [122.35, -28.98],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    }
-                },
-                'Agnew': {
-                    name: 'Agnew',
-                    areas: ['Kim Pit', 'Waroonga', 'Mill', 'Tailings'],
-                    mapConfig: {
-                        center: [120.68, -27.98],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    }
-                }
-            }
-        },
-        'RioTinto': {
-            name: 'RioTinto',
-            displayName: 'Rio Tinto',
-            sites: {
-                'Tom Price': {
-                    name: 'Tom Price',
-                    areas: ['North Deposit', 'South Deposit', 'Section 7', 'Processing', 'Rail'],
-                    mapConfig: {
-                        center: [117.79, -22.69],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    }
-                },
-                'Paraburdoo': {
-                    name: 'Paraburdoo',
-                    areas: ['Eastern Range', '4 East', 'Channar', 'Processing'],
-                    mapConfig: {
-                        center: [117.67, -23.20],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    }
-                },
-                'Marandoo': {
-                    name: 'Marandoo',
-                    areas: ['Main Pit', 'Extension', 'Stockpiles', 'Infrastructure'],
-                    mapConfig: {
-                        center: [118.13, -22.62],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    }
-                }
-            }
-        },
-        'FMG': {
-            name: 'FMG',
-            displayName: 'Fortescue Metals Group',
-            sites: {
-                'Christmas Creek': {
-                    name: 'Christmas Creek',
-                    areas: ['Cloudbreak West', 'Eastern Hub', 'Central', 'Processing', 'Rail'],
-                    mapConfig: {
-                        center: [119.78, -22.35],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    }
-                },
-                'Solomon': {
-                    name: 'Solomon',
-                    areas: ['Kings Valley', 'Firetail', 'Queens Valley', 'Infrastructure'],
-                    mapConfig: {
-                        center: [117.14, -22.78],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    }
-                },
-                'Iron Bridge': {
-                    name: 'Iron Bridge',
-                    areas: ['North Star', 'Glacier Valley', 'Processing', 'Port'],
-                    mapConfig: {
-                        center: [119.15, -22.15],
-                        defaultZoom: 14,
-                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    }
-                }
             }
         }
     };
