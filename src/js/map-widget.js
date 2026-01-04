@@ -2,32 +2,34 @@
 // Handles map initialization, drawing tools, and KML generation
 
 const MapWidget = (function() {
-    // Site configurations
-    const SITES = {
-        'Saraji': {
-            name: 'Saraji',
-            center: [148.2875, -22.40],
-            defaultZoom: 14,
-            tileUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-        },
-        'Goldfields': {
-            name: 'Goldfields',
-            center: [121.5, -30.75],
-            defaultZoom: 14,
-            tileUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-        }
-    };
-
     let map = null;
     let drawSource = null;
     let drawInteraction = null;
     let featureHistory = [];
-    let currentSite = null;
+    let currentConfig = null;
+    let orthoLayer = null;
+    let initialized = false;
 
-    function init(siteKey) {
-        currentSite = SITES[siteKey] || SITES['Saraji'];
+    /**
+     * Initialize the map with a site configuration
+     * @param {Object} config - Site map configuration
+     * @param {Array} config.center - [longitude, latitude]
+     * @param {number} config.defaultZoom - Default zoom level
+     * @param {string} config.orthoUrl - URL for ortho tiles (optional)
+     */
+    function init(config) {
+        if (initialized) {
+            updateSite(config);
+            return map;
+        }
 
-        // Create layers
+        currentConfig = config || {
+            center: [134.0, -25.0], // Default to Australia center
+            defaultZoom: 5,
+            orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+        };
+
+        // Create base layers
         const osm = new ol.layer.Tile({
             source: new ol.source.OSM(),
             visible: false,
@@ -43,9 +45,10 @@ const MapWidget = (function() {
             properties: { name: 'satellite' }
         });
 
-        const ortho = new ol.layer.Tile({
+        // Ortho layer - can be updated per site
+        orthoLayer = new ol.layer.Tile({
             source: new ol.source.XYZ({
-                url: currentSite.tileUrl,
+                url: currentConfig.orthoUrl || 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                 maxZoom: 21
             }),
             visible: true,
@@ -70,10 +73,10 @@ const MapWidget = (function() {
         // Initialize map
         map = new ol.Map({
             target: 'map',
-            layers: [osm, satellite, ortho, drawLayer],
+            layers: [osm, satellite, orthoLayer, drawLayer],
             view: new ol.View({
-                center: ol.proj.fromLonLat(currentSite.center),
-                zoom: currentSite.defaultZoom,
+                center: ol.proj.fromLonLat(currentConfig.center),
+                zoom: currentConfig.defaultZoom,
                 maxZoom: 21
             }),
             controls: ol.control.defaults.defaults({ zoom: true }).extend([
@@ -84,7 +87,10 @@ const MapWidget = (function() {
         // Update feature count on change
         drawSource.on('change', () => {
             const count = drawSource.getFeatures().length;
-            document.getElementById('featureCount').textContent = count;
+            const featureCountEl = document.getElementById('featureCount');
+            if (featureCountEl) {
+                featureCountEl.textContent = count;
+            }
             updateKmlData();
         });
 
@@ -92,6 +98,7 @@ const MapWidget = (function() {
         setupToolButtons();
         setupLayerButtons();
 
+        initialized = true;
         return map;
     }
 
@@ -183,7 +190,43 @@ const MapWidget = (function() {
         });
     }
 
+    /**
+     * Update the map to show a new site
+     * @param {Object} config - Site map configuration
+     */
+    function updateSite(config) {
+        if (!map || !config) return;
+
+        currentConfig = config;
+
+        // Update ortho layer source if URL is different
+        if (config.orthoUrl && orthoLayer) {
+            orthoLayer.setSource(new ol.source.XYZ({
+                url: config.orthoUrl,
+                maxZoom: 21
+            }));
+        }
+
+        // Animate to new location
+        map.getView().animate({
+            center: ol.proj.fromLonLat(config.center),
+            zoom: config.defaultZoom,
+            duration: 500
+        });
+
+        // Clear any existing drawings when switching sites
+        if (drawSource.getFeatures().length > 0) {
+            const shouldClear = confirm('Changing sites will clear your current drawings. Continue?');
+            if (shouldClear) {
+                drawSource.clear();
+                featureHistory = [];
+            }
+        }
+    }
+
     function generateKML() {
+        if (!drawSource) return '';
+        
         const features = drawSource.getFeatures();
         if (!features.length) return '';
 
@@ -194,7 +237,15 @@ const MapWidget = (function() {
 
         const featuresClone = features.map(f => {
             const clone = f.clone();
-            clone.getGeometry().transform('EPSG:3857', 'EPSG:4326');
+            let geom = clone.getGeometry();
+            
+            // Convert Circle to Polygon (KML doesn't support circles)
+            if (geom.getType() === 'Circle') {
+                geom = ol.geom.Polygon.fromCircle(geom, 64);
+                clone.setGeometry(geom);
+            }
+            
+            geom.transform('EPSG:3857', 'EPSG:4326');
             clone.setStyle(new ol.style.Style({
                 fill: new ol.style.Fill({ color: [10, 186, 239, 0.3] }),
                 stroke: new ol.style.Stroke({ color: [10, 186, 239, 1], width: 2 })
@@ -207,21 +258,10 @@ const MapWidget = (function() {
 
     function updateKmlData() {
         const kml = generateKML();
-        document.getElementById('kmlData').value = kml;
-    }
-
-    function updateSite(siteKey) {
-        if (!map) return;
-        
-        const site = SITES[siteKey];
-        if (!site) return;
-
-        currentSite = site;
-        map.getView().animate({
-            center: ol.proj.fromLonLat(site.center),
-            zoom: site.defaultZoom,
-            duration: 500
-        });
+        const kmlInput = document.getElementById('kmlData');
+        if (kmlInput) {
+            kmlInput.value = kml;
+        }
     }
 
     function getFeatureCount() {
@@ -235,13 +275,23 @@ const MapWidget = (function() {
         }
     }
 
+    function isInitialized() {
+        return initialized;
+    }
+
+    function getMap() {
+        return map;
+    }
+
     return {
         init,
         generateKML,
         updateSite,
         getFeatureCount,
         clear,
-        setTool
+        setTool,
+        isInitialized,
+        getMap
     };
 })();
 

@@ -4,95 +4,231 @@
 (function() {
     'use strict';
 
-    // Flight configurations for daily list
-    const FLIGHT_CONFIG = {
-        'Daily Panos': {
-            missionType: 'Panorama',
-            plannedFlightTime: 15,
-            entries: [
-                { name: 'Daily Panos 1', dock: 'Dock 3-i016-B (SOUTH)' },
-                { name: 'Daily Panos 2', dock: 'Dock 3-i016-B (SOUTH)' },
-                { name: 'Daily Panos 3', dock: 'Dock 3-I015-B (NORTH)' }
-            ]
+    // ============================================================
+    // COMPANY AND SITE CONFIGURATION
+    // ============================================================
+    // This configuration maps companies to their sites and site areas
+    // The map widget will update based on selected site
+    
+    const COMPANY_CONFIG = {
+        'BMA': {
+            name: 'BMA',
+            displayName: 'BHP Mitsubishi Alliance',
+            sites: {
+                'Saraji': {
+                    name: 'Saraji',
+                    areas: ['6W', '8W', '10W', '12W', 'Saraji East', 'Processing Plant', 'Stockpile Area'],
+                    mapConfig: {
+                        center: [148.2875, -22.40],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                },
+                'Goonyella': {
+                    name: 'Goonyella',
+                    areas: ['North Pit', 'South Pit', 'East Pit', 'CHPP', 'Rail Loop'],
+                    mapConfig: {
+                        center: [148.12, -21.82],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                },
+                'Peak Downs': {
+                    name: 'Peak Downs',
+                    areas: ['Main Pit', 'Extension', 'Haul Road', 'Processing'],
+                    mapConfig: {
+                        center: [148.19, -22.26],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                }
+            }
         },
-        'PIT Coal 6': {
-            missionType: 'Survey - Nadir',
-            plannedFlightTime: 45,
-            dock: 'Dock 3-S015-A (NORTH)'
+        'Goldfields': {
+            name: 'Goldfields',
+            displayName: 'Goldfields',
+            sites: {
+                'St Ives': {
+                    name: 'St Ives',
+                    areas: ['Invincible', 'Hamlet', 'Neptune', 'Athena', 'Processing'],
+                    mapConfig: {
+                        center: [121.67, -31.22],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                },
+                'Granny Smith': {
+                    name: 'Granny Smith',
+                    areas: ['Open Pit', 'Underground Portal', 'Processing Plant', 'TSF'],
+                    mapConfig: {
+                        center: [122.35, -28.98],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                },
+                'Agnew': {
+                    name: 'Agnew',
+                    areas: ['Kim Pit', 'Waroonga', 'Mill', 'Tailings'],
+                    mapConfig: {
+                        center: [120.68, -27.98],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                }
+            }
         },
-        'PIT Coal 8': {
-            missionType: 'Survey - Nadir',
-            plannedFlightTime: 50,
-            dock: 'Dock 3-S015-A (NORTH)'
+        'RioTinto': {
+            name: 'RioTinto',
+            displayName: 'Rio Tinto',
+            sites: {
+                'Tom Price': {
+                    name: 'Tom Price',
+                    areas: ['North Deposit', 'South Deposit', 'Section 7', 'Processing', 'Rail'],
+                    mapConfig: {
+                        center: [117.79, -22.69],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                },
+                'Paraburdoo': {
+                    name: 'Paraburdoo',
+                    areas: ['Eastern Range', '4 East', 'Channar', 'Processing'],
+                    mapConfig: {
+                        center: [117.67, -23.20],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                },
+                'Marandoo': {
+                    name: 'Marandoo',
+                    areas: ['Main Pit', 'Extension', 'Stockpiles', 'Infrastructure'],
+                    mapConfig: {
+                        center: [118.13, -22.62],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                }
+            }
         },
-        'PIT Coal 9': {
-            missionType: 'Survey - Nadir',
-            plannedFlightTime: 40,
-            dock: 'Dock 3-i016-A (SOUTH)'
-        },
-        'PIT Coal 12': {
-            missionType: 'Survey - Nadir',
-            plannedFlightTime: 35,
-            dock: 'Dock 3-i016-A (SOUTH)'
-        },
-        'PIT Coal 13-14': {
-            missionType: 'Survey - Nadir',
-            plannedFlightTime: 55,
-            dock: 'Dock 3-i016-A (SOUTH)'
-        },
-        'PIT Coal 15': {
-            missionType: 'Survey - Nadir',
-            plannedFlightTime: 30,
-            dock: 'Dock 3-i016-A (SOUTH)'
-        },
-        'PIT Coal 16': {
-            missionType: 'Survey - Nadir',
-            plannedFlightTime: 25,
-            dock: 'Dock 3-i016-A (SOUTH)'
-        },
-        'PIT Coal 1A': {
-            missionType: 'Survey - Nadir',
-            plannedFlightTime: 40,
-            dock: 'Dock 3-S015-A (NORTH)'
-        },
-        'PIT Coal 2-4': {
-            missionType: 'Survey - Nadir',
-            plannedFlightTime: 60,
-            dock: 'Dock 3-S015-A (NORTH)'
+        'FMG': {
+            name: 'FMG',
+            displayName: 'Fortescue Metals Group',
+            sites: {
+                'Christmas Creek': {
+                    name: 'Christmas Creek',
+                    areas: ['Cloudbreak West', 'Eastern Hub', 'Central', 'Processing', 'Rail'],
+                    mapConfig: {
+                        center: [119.78, -22.35],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                },
+                'Solomon': {
+                    name: 'Solomon',
+                    areas: ['Kings Valley', 'Firetail', 'Queens Valley', 'Infrastructure'],
+                    mapConfig: {
+                        center: [117.14, -22.78],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                },
+                'Iron Bridge': {
+                    name: 'Iron Bridge',
+                    areas: ['North Star', 'Glacier Valley', 'Processing', 'Port'],
+                    mapConfig: {
+                        center: [119.15, -22.15],
+                        defaultZoom: 14,
+                        orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    }
+                }
+            }
         }
     };
 
-    // State
+    // ============================================================
+    // STATE
+    // ============================================================
+    let currentCompany = null;
+    let currentSite = null;
     let uploadedFiles = [];
     let isSubmitting = false;
 
-    // Initialize application
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
     function init() {
+        // Get company from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const companyKey = urlParams.get('company');
+        
+        if (!companyKey || !COMPANY_CONFIG[companyKey]) {
+            showInvalidCompany();
+            return;
+        }
+        
+        currentCompany = COMPANY_CONFIG[companyKey];
+        document.getElementById('companyId').value = companyKey;
+        document.getElementById('companyBadge').textContent = currentCompany.displayName;
+        
+        // Populate sites dropdown
+        populateSites();
+        
+        // Setup event listeners
         setupEventListeners();
         setDefaultDate();
-        initializeMap();
     }
 
-    function initializeMap() {
+    function showInvalidCompany() {
+        document.getElementById('mainContent').style.display = 'none';
+        document.getElementById('invalidCompany').style.display = 'flex';
+    }
+
+    function populateSites() {
         const siteSelect = document.getElementById('siteSelection');
-        const initialSite = siteSelect.value || 'Saraji';
-        MapWidget.init(initialSite);
+        siteSelect.innerHTML = '<option value="">Select a site...</option>';
+        
+        Object.keys(currentCompany.sites).forEach(siteKey => {
+            const site = currentCompany.sites[siteKey];
+            const option = document.createElement('option');
+            option.value = siteKey;
+            option.textContent = site.name;
+            siteSelect.appendChild(option);
+        });
     }
 
-    function setupEventListeners() {
-        // Request type toggle
-        document.querySelectorAll('input[name="requestType"]').forEach(radio => {
-            radio.addEventListener('change', handleRequestTypeChange);
+    function populateSiteAreas(siteKey) {
+        const areaSelect = document.getElementById('siteArea');
+        areaSelect.innerHTML = '<option value="">Select area...</option>';
+        
+        if (!siteKey || !currentCompany.sites[siteKey]) {
+            areaSelect.innerHTML = '<option value="">Select site first...</option>';
+            return;
+        }
+        
+        const site = currentCompany.sites[siteKey];
+        site.areas.forEach(area => {
+            const option = document.createElement('option');
+            option.value = area;
+            option.textContent = area;
+            areaSelect.appendChild(option);
         });
+    }
 
-        // Site selection change
-        document.getElementById('siteSelection').addEventListener('change', (e) => {
-            MapWidget.updateSite(e.target.value);
-        });
+    // ============================================================
+    // EVENT LISTENERS
+    // ============================================================
+    function setupEventListeners() {
+        // Site selection change - updates areas and map
+        document.getElementById('siteSelection').addEventListener('change', handleSiteChange);
 
         // Custom parameters toggle
         document.getElementById('customParams').addEventListener('change', (e) => {
             document.getElementById('paramsSection').style.display = e.target.checked ? 'grid' : 'none';
+        });
+
+        // Frequency type toggle
+        document.querySelectorAll('input[name="frequencyType"]').forEach(radio => {
+            radio.addEventListener('change', handleFrequencyChange);
         });
 
         // File upload
@@ -102,21 +238,52 @@
         document.getElementById('missionForm').addEventListener('submit', handleSubmit);
     }
 
+    function handleSiteChange(e) {
+        const siteKey = e.target.value;
+        
+        // Update site areas dropdown
+        populateSiteAreas(siteKey);
+        
+        // Update map widget
+        if (siteKey && currentCompany.sites[siteKey]) {
+            currentSite = currentCompany.sites[siteKey];
+            const mapConfig = currentSite.mapConfig;
+            
+            // Initialize or update map
+            if (!window.MapWidget.isInitialized()) {
+                window.MapWidget.init(mapConfig);
+            } else {
+                window.MapWidget.updateSite(mapConfig);
+            }
+        }
+    }
+
+    function handleFrequencyChange(e) {
+        const isRepeating = e.target.value === 'Repeating';
+        const repeatingOptions = document.getElementById('repeatingOptions');
+        const repeatFrequency = document.getElementById('repeatFrequency');
+        
+        repeatingOptions.style.display = isRepeating ? 'block' : 'none';
+        repeatFrequency.required = isRepeating;
+        
+        if (!isRepeating) {
+            repeatFrequency.value = '';
+        }
+    }
+
     function setDefaultDate() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('missionDate').value = today;
+        const today = new Date();
+        // Set to tomorrow by default for planning purposes
+        today.setDate(today.getDate() + 1);
+        document.getElementById('missionDate').value = today.toISOString().split('T')[0];
+        
+        // Set minimum date to today
+        document.getElementById('missionDate').min = new Date().toISOString().split('T')[0];
     }
 
-    function handleRequestTypeChange(e) {
-        const isOnceOff = e.target.value === 'Once-off Request';
-        document.getElementById('onceOffSection').style.display = isOnceOff ? 'block' : 'none';
-        document.getElementById('dailyListSection').style.display = isOnceOff ? 'none' : 'block';
-
-        // Update required fields
-        document.getElementById('missionName').required = isOnceOff;
-        document.getElementById('missionType').required = isOnceOff;
-    }
-
+    // ============================================================
+    // FILE UPLOAD
+    // ============================================================
     function setupFileUpload() {
         const uploadArea = document.getElementById('fileUploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -150,6 +317,12 @@
         Array.from(files).forEach(file => {
             // Check for duplicates
             if (uploadedFiles.some(f => f.name === file.name)) {
+                return;
+            }
+
+            // Check file size (max 25MB)
+            if (file.size > 25 * 1024 * 1024) {
+                alert(`File "${file.name}" is too large. Maximum size is 25MB.`);
                 return;
             }
 
@@ -199,6 +372,9 @@
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
+    // ============================================================
+    // FORM SUBMISSION
+    // ============================================================
     function formatDateYYMMDD(dateStr) {
         const date = new Date(dateStr);
         const yy = date.getFullYear().toString().slice(-2);
@@ -211,6 +387,13 @@
         e.preventDefault();
 
         if (isSubmitting) return;
+        
+        // Validate site selection
+        if (!document.getElementById('siteSelection').value) {
+            alert('Please select a site.');
+            return;
+        }
+
         isSubmitting = true;
 
         const submitBtn = document.getElementById('submitBtn');
@@ -243,94 +426,59 @@
 
     function collectFormData() {
         const form = document.getElementById('missionForm');
-        const requestType = document.querySelector('input[name="requestType"]:checked').value;
-        const isOnceOff = requestType === 'Once-off Request';
+        const frequencyType = document.querySelector('input[name="frequencyType"]:checked').value;
+        const isRepeating = frequencyType === 'Repeating';
+        const kmlData = window.MapWidget.generateKML();
+        const dateFormatted = formatDateYYMMDD(form.missionDate.value);
 
-        const baseData = {
-            siteSelection: form.siteSelection.value,
-            whereOnsite: form.whereOnsite.value,
-            site: form.site.value,
-            requestType: requestType,
+        const data = {
+            // Company & Site
+            company: currentCompany.name,
+            companyDisplayName: currentCompany.displayName,
+            site: form.siteSelection.value,
+            siteArea: form.siteArea.value,
+            
+            // Mission Details
+            missionName: form.missionName.value,
+            missionType: form.missionType.value,
+            customerComment: form.customerComment.value,
+            
+            // Custom Parameters
+            customParams: form.customParams.checked,
+            imageResolution: form.customParams.checked && form.imageResolution.value ? parseFloat(form.imageResolution.value) : null,
+            missionHeight: form.customParams.checked && form.missionHeight.value ? parseFloat(form.missionHeight.value) : null,
+            overlapForward: form.customParams.checked && form.overlapForward.value ? parseFloat(form.overlapForward.value) : null,
+            overlapSide: form.customParams.checked && form.overlapSide.value ? parseFloat(form.overlapSide.value) : null,
+            terrainFollowing: form.customParams.checked ? form.terrainFollowing.value : null,
+            elevationOptimisation: form.customParams.checked ? form.elevationOptimisation.value : null,
+            
+            // Frequency
+            frequencyType: frequencyType,
+            repeatFrequency: isRepeating ? form.repeatFrequency.value : null,
+            
+            // Schedule
             missionDate: form.missionDate.value,
             missionPriority: parseInt(form.missionPriority.value),
-            howOften: form.howOften.value,
+            
+            // Contact
             submitterName: form.submitterName.value,
             submitterEmail: form.submitterEmail.value,
-            contactNumber: form.contactNumber.value
+            contactNumber: form.contactNumber.value,
+            
+            // KML Data
+            kmlData: kmlData,
+            
+            // Generated title
+            title: `${dateFormatted} ${currentCompany.name} ${form.siteSelection.value} ${form.siteArea.value} ${form.missionName.value}`.trim(),
+            
+            // Files
+            files: uploadedFiles,
+            
+            // Metadata
+            submittedAt: new Date().toISOString()
         };
 
-        if (isOnceOff) {
-            // Once-off request
-            const kmlData = MapWidget.generateKML();
-            const dateFormatted = formatDateYYMMDD(form.missionDate.value);
-            
-            return {
-                ...baseData,
-                missionName: form.missionName.value,
-                missionType: form.missionType.value,
-                customerComment: form.customerComment.value,
-                customParams: form.customParams.checked,
-                imageResolution: form.imageResolution.value ? parseFloat(form.imageResolution.value) : null,
-                missionHeight: form.missionHeight.value ? parseFloat(form.missionHeight.value) : null,
-                overlapForward: form.overlapForward.value ? parseFloat(form.overlapForward.value) : null,
-                overlapSide: form.overlapSide.value ? parseFloat(form.overlapSide.value) : null,
-                terrainFollowing: form.terrainFollowing.value,
-                elevationOptimisation: form.elevationOptimisation.value,
-                kmlData: kmlData,
-                title: `${dateFormatted} ${form.site.value} ${form.whereOnsite.value} ${form.missionName.value}`.trim(),
-                siteOrder: 1,
-                files: uploadedFiles
-            };
-        } else {
-            // Daily flight list
-            const selectedFlights = Array.from(document.querySelectorAll('input[name="dailyFlights"]:checked'))
-                .map(cb => cb.value);
-
-            // Expand flights with configuration
-            const missions = [];
-            let siteOrder = 0;
-
-            selectedFlights.forEach(flightName => {
-                const config = FLIGHT_CONFIG[flightName];
-                if (!config) return;
-
-                const dateFormatted = formatDateYYMMDD(form.missionDate.value);
-
-                if (config.entries) {
-                    // Multiple entries (e.g., Daily Panos)
-                    config.entries.forEach(entry => {
-                        siteOrder++;
-                        missions.push({
-                            ...baseData,
-                            taskName: entry.name,
-                            missionType: config.missionType,
-                            plannedFlightTime: config.plannedFlightTime,
-                            dock: entry.dock,
-                            title: `${dateFormatted} ${form.site.value} ${form.whereOnsite.value} ${entry.name}`.trim(),
-                            siteOrder: siteOrder
-                        });
-                    });
-                } else {
-                    // Single entry
-                    siteOrder++;
-                    missions.push({
-                        ...baseData,
-                        taskName: flightName,
-                        missionType: config.missionType,
-                        plannedFlightTime: config.plannedFlightTime,
-                        dock: config.dock,
-                        title: `${dateFormatted} ${form.site.value} ${form.whereOnsite.value} ${flightName}`.trim(),
-                        siteOrder: siteOrder
-                    });
-                }
-            });
-
-            return {
-                requestType: 'Repeated Task List',
-                missions: missions,
-                files: uploadedFiles
-            };
-        }
+        return data;
     }
 
     async function submitToApi(formData) {
@@ -339,6 +487,7 @@
             (formData.files || []).map(async file => ({
                 name: file.name,
                 type: file.type,
+                size: file.size,
                 data: await fileToBase64(file)
             }))
         );

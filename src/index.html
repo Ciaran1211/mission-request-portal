@@ -24,109 +24,50 @@
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                 </svg>
                 <span>Mission Request Portal</span>
+                <span class="company-badge" id="companyBadge"></span>
             </div>
         </header>
 
+        <!-- Invalid Company Message -->
+        <div class="error-container" id="invalidCompany" style="display: none;">
+            <div class="error-card">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 8v4M12 16h.01"/>
+                </svg>
+                <h2>Invalid or Missing Company</h2>
+                <p>Please use a valid company link to access this form.</p>
+                <p class="hint">Example: <code>?company=BMA</code></p>
+            </div>
+        </div>
+
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content" id="mainContent">
             <form id="missionForm" class="mission-form">
                 
                 <!-- Section 1: Site Selection -->
                 <section class="form-section">
                     <h2 class="section-title">
                         <span class="section-number">1</span>
-                        Site Information
+                        Site Selection
                     </h2>
                     
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="siteSelection">Site Selection *</label>
+                            <label for="siteSelection">Site *</label>
                             <select id="siteSelection" name="siteSelection" required>
                                 <option value="">Select a site...</option>
-                                <option value="Saraji">Saraji</option>
-                                <option value="Goldfields">Goldfields</option>
                             </select>
                         </div>
                         
                         <div class="form-group">
-                            <label for="whereOnsite">Where Onsite</label>
-                            <select id="whereOnsite" name="whereOnsite">
-                                <option value="">Select area...</option>
-                                <option value="6W">6W</option>
-                                <option value="8W">8W</option>
-                                <option value="10W">10W</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="site">Client Site *</label>
-                            <select id="site" name="site" required>
-                                <option value="">Select client...</option>
-                                <option value="BMA">BMA</option>
-                                <option value="Goldfields">Goldfields</option>
-                                <option value="Rio Tinto">Rio Tinto</option>
+                            <label for="siteArea">Site Area *</label>
+                            <select id="siteArea" name="siteArea" required>
+                                <option value="">Select site first...</option>
                             </select>
                         </div>
                     </div>
-                </section>
 
-                <!-- Section 2: Request Type -->
-                <section class="form-section">
-                    <h2 class="section-title">
-                        <span class="section-number">2</span>
-                        Request Type
-                    </h2>
-                    
-                    <div class="request-type-toggle">
-                        <input type="radio" id="onceOff" name="requestType" value="Once-off Request" checked>
-                        <label for="onceOff" class="toggle-option">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <path d="M12 6v6l4 2"/>
-                            </svg>
-                            Once-off Request
-                        </label>
-                        
-                        <input type="radio" id="dailyList" name="requestType" value="Repeated Task List">
-                        <label for="dailyList" class="toggle-option">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
-                            </svg>
-                            Daily Flight List
-                        </label>
-                    </div>
-                </section>
-
-                <!-- Section 3: Once-off Details (conditional) -->
-                <section class="form-section" id="onceOffSection">
-                    <h2 class="section-title">
-                        <span class="section-number">3</span>
-                        Mission Details
-                    </h2>
-                    
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="missionName">Mission Name *</label>
-                            <input type="text" id="missionName" name="missionName" placeholder="Enter mission name" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="missionType">Mission Type *</label>
-                            <select id="missionType" name="missionType" required>
-                                <option value="">Select type...</option>
-                                <option value="Survey - Nadir (standard mapping survey)">Survey - Nadir (standard mapping)</option>
-                                <option value="Survey - Oblique">Survey - Oblique</option>
-                                <option value="Inspection">Inspection</option>
-                                <option value="Panorama">Panorama</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group full-width">
-                            <label for="customerComment">Description</label>
-                            <textarea id="customerComment" name="customerComment" rows="3" placeholder="Describe your mission requirements..."></textarea>
-                        </div>
-                    </div>
-                    
                     <!-- Map Widget -->
                     <div class="map-section">
                         <h3>Draw Mission Area</h3>
@@ -171,146 +112,129 @@
                         <div class="map-container">
                             <div id="map"></div>
                             <div class="map-overlay">
-                                <span id="featureCount">0</span> features drawn
+                                <span id="featureCount">0</span> area(s) drawn
                             </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Custom Parameters Toggle -->
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="customParams" name="customParams">
-                            <span class="checkbox-custom"></span>
-                            I want to specify custom flight parameters
-                        </label>
-                    </div>
-                    
-                    <!-- Custom Parameters (conditional) -->
-                    <div class="params-grid" id="paramsSection" style="display: none;">
-                        <div class="form-group">
-                            <label for="imageResolution">Image Resolution (cm/px)</label>
-                            <input type="number" id="imageResolution" name="imageResolution" placeholder="e.g., 2.5">
-                        </div>
-                        <div class="form-group">
-                            <label for="missionHeight">Flight Height (m)</label>
-                            <input type="number" id="missionHeight" name="missionHeight" placeholder="e.g., 100">
-                        </div>
-                        <div class="form-group">
-                            <label for="overlapForward">Forward Overlap (%)</label>
-                            <input type="number" id="overlapForward" name="overlapForward" placeholder="e.g., 75">
-                        </div>
-                        <div class="form-group">
-                            <label for="overlapSide">Side Overlap (%)</label>
-                            <input type="number" id="overlapSide" name="overlapSide" placeholder="e.g., 65">
-                        </div>
-                        <div class="form-group">
-                            <label for="terrainFollowing">Terrain Following</label>
-                            <select id="terrainFollowing" name="terrainFollowing">
-                                <option value="">Select...</option>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="elevationOptimisation">Elevation Optimisation</label>
-                            <select id="elevationOptimisation" name="elevationOptimisation">
-                                <option value="">Select...</option>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
-                            </select>
                         </div>
                     </div>
                 </section>
 
-                <!-- Section 3b: Daily Flight List (conditional) -->
-                <section class="form-section" id="dailyListSection" style="display: none;">
+                <!-- Section 2: Mission Details -->
+                <section class="form-section">
                     <h2 class="section-title">
-                        <span class="section-number">3</span>
-                        Daily Flight List
+                        <span class="section-number">2</span>
+                        Mission Details
                     </h2>
                     
-                    <p class="section-description">Select the flights to be added to the daily schedule.</p>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="missionName">Mission Name *</label>
+                            <input type="text" id="missionName" name="missionName" placeholder="Enter mission name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="missionType">Mission Type *</label>
+                            <select id="missionType" name="missionType" required>
+                                <option value="">Select type...</option>
+                                <option value="Survey - Nadir (standard mapping survey)">Survey - Nadir (standard mapping)</option>
+                                <option value="Survey - Oblique">Survey - Oblique</option>
+                                <option value="Inspection">Inspection</option>
+                                <option value="Panorama">Panorama</option>
+                                <option value="Stockpile">Stockpile</option>
+                                <option value="Progress Monitoring">Progress Monitoring</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="customerComment">Description</label>
+                            <textarea id="customerComment" name="customerComment" rows="3" placeholder="Describe your mission requirements..."></textarea>
+                        </div>
+                    </div>
                     
-                    <div class="flight-list">
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="Daily Panos">
-                                <span class="checkbox-custom"></span>
-                                Daily Panos
-                            </label>
-                            <span class="flight-info">3 flights • Panorama</span>
+                    <!-- Custom Parameters Toggle -->
+                    <div class="custom-params-section">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="customParams" name="customParams">
+                            <span class="checkbox-custom"></span>
+                            Specify custom flight parameters
+                        </label>
+                        
+                        <div class="params-grid" id="paramsSection" style="display: none;">
+                            <div class="form-group">
+                                <label for="imageResolution">Image Resolution (cm/px)</label>
+                                <input type="number" id="imageResolution" name="imageResolution" step="0.1" min="0.5" max="20" placeholder="e.g., 2.5">
+                            </div>
+                            <div class="form-group">
+                                <label for="missionHeight">Mission Height (m AGL)</label>
+                                <input type="number" id="missionHeight" name="missionHeight" step="1" min="30" max="400" placeholder="e.g., 100">
+                            </div>
+                            <div class="form-group">
+                                <label for="overlapForward">Forward Overlap (%)</label>
+                                <input type="number" id="overlapForward" name="overlapForward" step="1" min="50" max="95" placeholder="e.g., 75">
+                            </div>
+                            <div class="form-group">
+                                <label for="overlapSide">Side Overlap (%)</label>
+                                <input type="number" id="overlapSide" name="overlapSide" step="1" min="50" max="95" placeholder="e.g., 65">
+                            </div>
+                            <div class="form-group">
+                                <label for="terrainFollowing">Terrain Follow</label>
+                                <select id="terrainFollowing" name="terrainFollowing">
+                                    <option value="">Select...</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="elevationOptimisation">Elevation Optimisation</label>
+                                <select id="elevationOptimisation" name="elevationOptimisation">
+                                    <option value="">Select...</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="PIT Coal 6">
-                                <span class="checkbox-custom"></span>
-                                PIT Coal 6
-                            </label>
-                            <span class="flight-info">Survey - Nadir</span>
-                        </div>
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="PIT Coal 8">
-                                <span class="checkbox-custom"></span>
-                                PIT Coal 8
-                            </label>
-                            <span class="flight-info">Survey - Nadir</span>
-                        </div>
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="PIT Coal 9">
-                                <span class="checkbox-custom"></span>
-                                PIT Coal 9
-                            </label>
-                            <span class="flight-info">Survey - Nadir</span>
-                        </div>
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="PIT Coal 12">
-                                <span class="checkbox-custom"></span>
-                                PIT Coal 12
-                            </label>
-                            <span class="flight-info">Survey - Nadir</span>
-                        </div>
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="PIT Coal 13-14">
-                                <span class="checkbox-custom"></span>
-                                PIT Coal 13-14
-                            </label>
-                            <span class="flight-info">Survey - Nadir</span>
-                        </div>
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="PIT Coal 15">
-                                <span class="checkbox-custom"></span>
-                                PIT Coal 15
-                            </label>
-                            <span class="flight-info">Survey - Nadir</span>
-                        </div>
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="PIT Coal 16">
-                                <span class="checkbox-custom"></span>
-                                PIT Coal 16
-                            </label>
-                            <span class="flight-info">Survey - Nadir</span>
-                        </div>
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="PIT Coal 1A">
-                                <span class="checkbox-custom"></span>
-                                PIT Coal 1A
-                            </label>
-                            <span class="flight-info">Survey - Nadir</span>
-                        </div>
-                        <div class="flight-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="dailyFlights" value="PIT Coal 2-4">
-                                <span class="checkbox-custom"></span>
-                                PIT Coal 2-4
-                            </label>
-                            <span class="flight-info">Survey - Nadir</span>
+                    </div>
+                </section>
+
+                <!-- Section 3: Frequency -->
+                <section class="form-section">
+                    <h2 class="section-title">
+                        <span class="section-number">3</span>
+                        Frequency
+                    </h2>
+                    
+                    <div class="request-type-toggle">
+                        <input type="radio" id="onceOff" name="frequencyType" value="Once-off" checked>
+                        <label for="onceOff" class="toggle-option">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                            Once-off
+                        </label>
+                        
+                        <input type="radio" id="repeating" name="frequencyType" value="Repeating">
+                        <label for="repeating" class="toggle-option">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 2l4 4-4 4"/>
+                                <path d="M3 11v-1a4 4 0 014-4h14"/>
+                                <path d="M7 22l-4-4 4-4"/>
+                                <path d="M21 13v1a4 4 0 01-4 4H3"/>
+                            </svg>
+                            Repeating
+                        </label>
+                    </div>
+                    
+                    <div class="repeating-options" id="repeatingOptions" style="display: none;">
+                        <div class="form-group">
+                            <label for="repeatFrequency">Repeat Frequency *</label>
+                            <select id="repeatFrequency" name="repeatFrequency">
+                                <option value="">Select frequency...</option>
+                                <option value="Daily">Daily</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Fortnightly">Fortnightly</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Quarterly">Quarterly</option>
+                            </select>
                         </div>
                     </div>
                 </section>
@@ -324,29 +248,19 @@
                     
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="missionDate">Required Date *</label>
+                            <label for="missionDate">Scheduled Date *</label>
                             <input type="date" id="missionDate" name="missionDate" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="missionPriority">Priority *</label>
+                            <label for="missionPriority">Mission Priority *</label>
                             <select id="missionPriority" name="missionPriority" required>
                                 <option value="">Select priority...</option>
-                                <option value="1">1 - Critical</option>
-                                <option value="2">2 - High</option>
-                                <option value="3">3 - Medium</option>
-                                <option value="4">4 - Low</option>
-                                <option value="5">5 - When Available</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="howOften">Frequency</label>
-                            <select id="howOften" name="howOften">
-                                <option value="Just once">Just once</option>
-                                <option value="Daily">Daily</option>
-                                <option value="Weekly">Weekly</option>
-                                <option value="Monthly">Monthly</option>
+                                <option value="1">1 - Critical (Same Day)</option>
+                                <option value="2">2 - High (Within 2 Days)</option>
+                                <option value="3" selected>3 - Medium (Within Week)</option>
+                                <option value="4">4 - Low (When Available)</option>
+                                <option value="5">5 - Flexible (No Rush)</option>
                             </select>
                         </div>
                     </div>
@@ -370,7 +284,7 @@
                         </div>
                         <div class="form-group">
                             <label for="contactNumber">Contact Number</label>
-                            <input type="tel" id="contactNumber" name="contactNumber">
+                            <input type="tel" id="contactNumber" name="contactNumber" placeholder="+61 4XX XXX XXX">
                         </div>
                     </div>
                 </section>
@@ -387,15 +301,16 @@
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
                         </svg>
                         <p>Drag and drop files here, or <span class="browse-link">browse</span></p>
-                        <p class="file-types">Supports: KML, KMZ, PDF, Images</p>
-                        <input type="file" id="fileInput" name="attachments" multiple accept=".kml,.kmz,.pdf,.png,.jpg,.jpeg" hidden>
+                        <p class="file-types">Supports: KML, KMZ, PDF, Images, Shapefiles</p>
+                        <input type="file" id="fileInput" name="attachments" multiple accept=".kml,.kmz,.pdf,.png,.jpg,.jpeg,.shp,.zip" hidden>
                     </div>
                     
                     <div class="file-list" id="fileList"></div>
                 </section>
 
-                <!-- Hidden KML Data -->
+                <!-- Hidden Fields -->
                 <input type="hidden" id="kmlData" name="kmlData">
+                <input type="hidden" id="companyId" name="companyId">
 
                 <!-- Submit -->
                 <div class="form-actions">

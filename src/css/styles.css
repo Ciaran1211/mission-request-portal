@@ -62,10 +62,27 @@ body {
     gap: 12px;
     font-size: 18px;
     font-weight: 600;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
 .logo svg {
     color: var(--cyan);
+}
+
+.company-badge {
+    margin-left: auto;
+    padding: 6px 14px;
+    background: rgba(10, 186, 239, 0.2);
+    border: 1px solid var(--cyan);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--cyan);
+}
+
+.company-badge:empty {
+    display: none;
 }
 
 /* Main Content */
@@ -75,6 +92,55 @@ body {
     width: 100%;
     margin: 0 auto;
     padding: 32px 24px;
+}
+
+/* Error Container (Invalid Company) */
+.error-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.error-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 60px 48px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    max-width: 450px;
+}
+
+.error-card svg {
+    color: var(--orange);
+    margin-bottom: 24px;
+}
+
+.error-card h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: var(--navy);
+}
+
+.error-card p {
+    color: var(--gray-600);
+    margin-bottom: 8px;
+}
+
+.error-card .hint {
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--gray-500);
+}
+
+.error-card code {
+    background: var(--gray-100);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    color: var(--navy);
 }
 
 /* Form */
@@ -266,6 +332,25 @@ input[type="radio"]:checked + .toggle-option svg {
     padding: 20px;
     background: var(--gray-100);
     border-radius: var(--radius-md);
+}
+
+/* Custom Parameters Section */
+.custom-params-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--gray-200);
+}
+
+/* Repeating Options */
+.repeating-options {
+    margin-top: 20px;
+    padding: 20px;
+    background: var(--gray-100);
+    border-radius: var(--radius-md);
+}
+
+.repeating-options .form-group {
+    max-width: 300px;
 }
 
 /* Flight List */
@@ -666,5 +751,21 @@ input[type="radio"]:checked + .toggle-option svg {
     
     .submit-btn {
         width: 100%;
+    }
+    
+    .company-badge {
+        display: none;
+    }
+    
+    .logo {
+        font-size: 16px;
+    }
+    
+    .params-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .error-card {
+        padding: 40px 24px;
     }
 }
