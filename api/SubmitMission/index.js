@@ -231,35 +231,33 @@ function mapToSharePointFields(data) {
     // The internal names might differ from display names
     const fields = {
         Title: data.title || 'Mission Request',
-        SiteSelection: data.siteSelection,
-        RequestType: data.requestType,
-        WhereOnsite: data.whereOnsite,
-        Site: data.site,
-        MissionType: data.missionType,
-        CustomerComment: data.customerComment,
-        MissionDate: data.missionDate,
-        MissionPriority: data.missionPriority,
-        HowOften: data.howOften,
-        SubmitterName: data.submitterName,
-        SubmitterEmail: data.submitterEmail,
-        ContactNumber: data.contactNumber,
-        SiteOrder: data.siteOrder
+        field_2: data.site,
+        field_5: data.missionType,
+        field_11: data.customerComment,
+        field_0: data.missionDate,
+        field_3: data.missionPriority,
+        field_6: data.howOften,
+        Requestedby: data.submitterName,
+        Emailcontact: data.submitterEmail,
+        Ph_x002e_Contact: data.contactNumber,
+        Site_x0020_Order: data.siteOrder,
+        field_1: data.company,
+        field_7: 'New Request',
+        field_8: 'Incomplete'
     };
 
     // Add optional fields if present
-    if (data.taskName) fields.TaskName = data.taskName;
     if (data.dock) fields.Dock = data.dock;
-    if (data.plannedFlightTime) fields.PlannedFlightTime = data.plannedFlightTime;
-    if (data.missionName) fields.MissionName = data.missionName;
     
     // Custom parameters
     if (data.customParams) {
-        if (data.imageResolution) fields.ImageResolution = data.imageResolution;
-        if (data.missionHeight) fields.MissionHeight = data.missionHeight;
-        if (data.overlapForward) fields.ImageOverlapForward = data.overlapForward;
-        if (data.overlapSide) fields.ImageOverlapSide = data.overlapSide;
-        if (data.terrainFollowing) fields.TerrainFollowing = data.terrainFollowing;
-        if (data.elevationOptimisation) fields.ElevationOptimisation = data.elevationOptimisation;
+        fields.CustomerParameters_x003f_ = data.customParams
+        if (data.imageResolution) fields.Resolution = data.imageResolution;
+        if (data.missionHeight) fields.Height_x0028_mAGL_x0029_ = data.missionHeight;
+        if (data.overlapForward) fields.ForwardOverlap_x0028__x0025__x00 = data.overlapForward;
+        if (data.overlapSide) fields.SideOverlap_x0028__x0025__x0029_ = data.overlapSide;
+        if (data.terrainFollowing) fields.TerrainFollow_x003f_ = data.terrainFollowing;
+        if (data.elevationOptimisation) fields.Elev_x002e_Opt_x003f_ = data.elevationOptimisation;
     }
 
     // Remove null/undefined values
