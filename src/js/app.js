@@ -10,9 +10,9 @@
     // ============================================================
     // Get these from your EmailJS dashboard: https://www.emailjs.com/
     const EMAILJS_CONFIG = {
-        publicKey: 'YOUR_PUBLIC_KEY',      // Account → API Keys → Public Key
-        serviceId: 'YOUR_SERVICE_ID',       // Email Services → Service ID
-        templateId: 'YOUR_TEMPLATE_ID'      // Email Templates → Template ID
+        publicKey: 'AuUzrhV2H93CJxoa0',      // Account → API Keys → Public Key
+        serviceId: 'service_4j8dixs',       // Email Services → Service ID
+        templateId: 'template_152awpf'      // Email Templates → Template ID
     };
 
     // ============================================================
