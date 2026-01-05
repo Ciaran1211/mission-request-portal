@@ -849,7 +849,10 @@ function collectFormData() {
                 Comment: row.comment || '',              // User comment/KML reference
                 SiteOrder: index + 1,                    // Position in order (1, 2, 3...)
                 Dock: row.mission.dock || '',            // Dock location from config
-                PlannedFlightTime: row.mission.plannedFlightTime || null  // Flight time in minutes
+                PlannedFlightTime: row.mission.plannedFlightTime || null,  // Flight time in minutes
+                MissionPlan: 'New Request',
+                JobStatus: 'Incomplete',
+                MissionType:  row.mission.missionType
             })),
 
             // Summary for title

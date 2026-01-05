@@ -22,73 +22,85 @@ const COMPANY_CONFIG = {
                         display: "Daily Panos 1", 
                         sharepoint: "251219 P SR PIT Daily Panos 1",
                         dock: "",
-                        plannedFlightTime: 15
+                        plannedFlightTime: 15,
+                        missionType: 'Panoramic'
                     },
                     { 
                         display: "Daily Panos 2", 
                         sharepoint: "251219 P SR PIT Daily Panos 2",
                         dock: "",
-                        plannedFlightTime: 15
+                        plannedFlightTime: 15,
+                        missionType: 'Panoramic'
                     },
                     { 
                         display: "Daily Panos 3", 
                         sharepoint: "251219 P SR PIT Daily Panos 3",
                         dock: "",
-                        plannedFlightTime: 15
+                        plannedFlightTime: 15,
+                        missionType: 'Panoramic'
                     },
                     { 
                         display: "PIT Coal 8", 
                         sharepoint: "251219 S SR PIT Coal 8",
                         dock: "",
-                        plannedFlightTime: 25
+                        plannedFlightTime: 25,
+                        missionType: 'Survey'
                     },
                     { 
                         display: "PIT Coal 9", 
                         sharepoint: "251219 S SR PIT Coal 9",
                         dock: "",
-                        plannedFlightTime: 25
+                        plannedFlightTime: 25,
+                        missionType: 'Survey'
                     },
                     { 
                         display: "PIT Coal 12", 
                         sharepoint: "251219 S SR PIT Coal 12",
                         dock: "",
-                        plannedFlightTime: 25
+                        plannedFlightTime: 25,
+                        missionType: 'Survey'
                     },
                     { 
                         display: "PIT Coal 13-14", 
                         sharepoint: "251219 S SR PIT Coal 13-14",
                         dock: "",
-                        plannedFlightTime: 30
+                        plannedFlightTime: 30,
+                        missionType: 'Survey'
                     },
                     { 
                         display: "PIT Coal 15", 
                         sharepoint: "251219 S SR PIT Coal 15",
                         dock: "",
-                        plannedFlightTime: 25
+                        plannedFlightTime: 25,
+                        missionType: 'Survey'
                     },
                     { 
                         display: "PIT Coal 16", 
                         sharepoint: "251219 S SR PIT Coal 16",
                         dock: "",
-                        plannedFlightTime: 25
+                        plannedFlightTime: 25,
+                        missionType: 'Survey'
                     },
                     { 
                         display: "PIT Coal 1A", 
                         sharepoint: "251219 S SR PIT Coal 1A",
                         dock: "",
-                        plannedFlightTime: 25
+                        plannedFlightTime: 25,
+                        missionType: 'Survey'
                     },
                     { 
                         display: "PIT Coal 2-4", 
                         sharepoint: "251219 S SR PIT Coal 2-4",
                         dock: "",
-                        plannedFlightTime: 35
+                        plannedFlightTime: 35,
+                        missionType: 'Survey'
                     },
                     { 
                         display: "PIT Coal 6", 
                         sharepoint: "251219 S SR PIT Coal 6",
                         dock: "",
-                        plannedFlightTime: 25
+                        plannedFlightTime: 25,
+                        missionType: 'Survey'
                     }
                 ]
             },
