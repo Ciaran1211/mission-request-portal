@@ -12,7 +12,14 @@
     <!-- EmailJS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     
+    <!-- Try multiple CSS paths -->
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Critical inline styles for toggle functionality -->
+    <style>
+        .hidden-section { display: none !important; }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -503,7 +510,46 @@
         </div>
     </div>
 
+    <!-- Try multiple JS paths -->
     <script src="app.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- Inline fallback for request type toggle -->
+    <script>
+        // Fallback toggle handler in case external JS doesn't load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Request type toggle - inline backup
+            const singleRadio = document.getElementById('singleRequest');
+            const repeatRadio = document.getElementById('repeatMission');
+
+            function toggleRequestType() {
+                const isRepeat = repeatRadio && repeatRadio.checked;
+
+                const singleSections = document.getElementById('singleRequestSections');
+                const repeatSection = document.getElementById('repeatMissionSection');
+                const contactSection = document.getElementById('singleContactSection');
+                const attachSection = document.getElementById('singleAttachmentsSection');
+
+                if (isRepeat) {
+                    if (singleSections) singleSections.style.display = 'none';
+                    if (repeatSection) repeatSection.style.display = 'block';
+                    if (contactSection) contactSection.style.display = 'none';
+                    if (attachSection) attachSection.style.display = 'none';
+                } else {
+                    if (singleSections) singleSections.style.display = 'block';
+                    if (repeatSection) repeatSection.style.display = 'none';
+                    if (contactSection) contactSection.style.display = 'block';
+                    if (attachSection) attachSection.style.display = 'block';
+                }
+            }
+
+            if (singleRadio) singleRadio.addEventListener('change', toggleRequestType);
+            if (repeatRadio) repeatRadio.addEventListener('change', toggleRequestType);
+
+            // Run once on load to set initial state
+            toggleRequestType();
+        });
+    </script>
 
     <!-- Priority Tooltip Script -->
     <script>
