@@ -443,17 +443,25 @@ function collectFormData() {
 
     const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
 
-    const missionTypeVal = (form.missionType.value || '').trim();
 
-        const map = {
-          'Survey - Nadir (standard mapping survey)': 'Survey',
-          'Survey - Oblique (e.g. pit wall models)': 'Survey',
-          'Panoramic (360-deg imagery)': 'Panoramic',
-          'Inspection imagery': 'Inspection',
-          'Video recording': 'Video',
-          'Video livestream': 'Livestream',
-          'Other': 'Other'
-        };
+const missionTypeVal = (form.missionType.value || '').trim();
+
+    // Normalize SharePoint-friendly mission type
+    const missionTypeForForm = (() => {
+      // Case-sensitive map (adjust toLowerCase if needed)
+      const map = {
+        'Survey - Nadir (standard mapping survey)': 'Survey',
+        'Survey - Oblique (e.g. pit wall models)': 'Survey',
+        'Panoramic (360-deg imagery)': 'Panoramic',
+        'Inspection imagery': 'Inspection',
+        'Video recording': 'Video',
+        'Video livestream': 'Livestream',
+        'Other': 'Other'
+      };
+      // Default to 'Other' if not matched
+      return map[missionTypeVal] || 'Other';
+    })();
+
 
     // Build SharePoint-ready data object matching the schema
     const data = {
@@ -465,7 +473,7 @@ function collectFormData() {
         SiteOrder: form.siteOrder.value ? parseInt(form.siteOrder.value) : null,
         Dock: form.dock.value || '',
         Priority: parseInt(form.missionPriority.value) || 3, // Integer 1-5
-        MissionType: map[missionTypeVal] || 'Other',
+        MissionType: missionTypeForForm,
         Frequency: frequency,
         MissionPlan: 'New Request',
         PlannedFlightTime: form.plannedFlightTime.value ? parseFloat(form.plannedFlightTime.value) : null,
