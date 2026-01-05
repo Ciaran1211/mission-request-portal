@@ -10,9 +10,9 @@
     // ============================================================
     // Get these from your EmailJS dashboard: https://www.emailjs.com/
     const EMAILJS_CONFIG = {
-        publicKey: 'AuUzrhV2H93CJxoa0',      // Account → API Keys → Public Key
-        serviceId: 'service_4j8dixs',       // Email Services → Service ID
-        templateId: 'template_152awpf'      // Email Templates → Template ID
+        publicKey: 'AuUzrhV2H93CJxoa0',      // Account â†’ API Keys â†’ Public Key
+        serviceId: 'service_4j8dixs',       // Email Services â†’ Service ID
+        templateId: 'template_152awpf'      // Email Templates â†’ Template ID
     };
 
     // ============================================================
@@ -409,6 +409,9 @@
         submitBtn.disabled = true;
 
         try {
+            // Validate form first
+            validateForm();
+
             const formData = collectFormData();
             const refId = await sendViaEmailJS(formData);
 
@@ -425,6 +428,66 @@
             submitBtn.disabled = false;
             isSubmitting = false;
         }
+    }
+
+    // Form validation function
+    function validateForm() {
+        const form = document.getElementById('missionForm');
+
+        // Basic HTML5 validation
+        if (!form.checkValidity()) {
+            const invalidField = form.querySelector(':invalid');
+            if (invalidField) {
+                invalidField.focus();
+                invalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            throw new Error('Please fill in all required fields correctly.');
+        }
+
+        // Additional custom validation
+        const missionDate = document.getElementById('missionDate').value;
+        const selectedDate = new Date(missionDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate < today) {
+            document.getElementById('missionDate').focus();
+            throw new Error('Scheduled date cannot be in the past');
+        }
+
+        // Validate custom parameters if enabled
+        if (document.getElementById('customParams').checked) {
+            const resolution = document.getElementById('imageResolution').value;
+            if (resolution && (resolution < 0.5 || resolution > 20)) {
+                document.getElementById('imageResolution').focus();
+                throw new Error('Image Resolution must be between 0.5 and 20 cm/px');
+            }
+
+            const height = document.getElementById('missionHeight').value;
+            if (height && (height < 30 || height > 400)) {
+                document.getElementById('missionHeight').focus();
+                throw new Error('Mission Height must be between 30 and 400 meters');
+            }
+
+            const forwardOverlap = document.getElementById('overlapForward').value;
+            if (forwardOverlap && (forwardOverlap < 50 || forwardOverlap > 95)) {
+                document.getElementById('overlapForward').focus();
+                throw new Error('Forward Overlap must be between 50% and 95%');
+            }
+
+            const sideOverlap = document.getElementById('overlapSide').value;
+            if (sideOverlap && (sideOverlap < 50 || sideOverlap > 95)) {
+                document.getElementById('overlapSide').focus();
+                throw new Error('Side Overlap must be between 50% and 95%');
+            }
+        }
+
+        // Validate file sizes
+        uploadedFiles.forEach(file => {
+            if (file.size > 25 * 1024 * 1024) {
+                throw new Error(`File "${file.name}" is too large. Maximum size is 25MB.`);
+            }
+        });
     }
 
     // Update the collectFormData function to match the schema
@@ -448,7 +511,6 @@ const missionTypeVal = (form.missionType.value || '').trim();
 
     // Normalize SharePoint-friendly mission type
     const missionTypeForForm = (() => {
-      // Case-sensitive map (adjust toLowerCase if needed)
       const map = {
         'Survey - Nadir (standard mapping survey)': 'Survey',
         'Survey - Oblique (e.g. pit wall models)': 'Survey',
@@ -458,45 +520,47 @@ const missionTypeVal = (form.missionType.value || '').trim();
         'Video livestream': 'Livestream',
         'Other': 'Other'
       };
-      // Default to 'Other' if not matched
-      return map[missionTypeVal] || 'Other';
+      return map[missionTypeVal] || missionTypeVal || 'Other';
     })();
 
+
+    // Helper to safely get form field value
+    const getFieldValue = (fieldName, defaultValue = '') => {
+        const field = form.elements[fieldName];
+        return field ? field.value : defaultValue;
+    };
 
     // Build SharePoint-ready data object matching the schema
     const data = {
         // === SHAREPOINT FIELDS ===
-        Title: `${dateFormatted} ${currentCompany.name} ${siteName} ${form.siteArea.value} ${form.missionName.value}`.trim(),
-        ScheduledDate: form.missionDate.value,
+        Title: `${dateFormatted} ${currentCompany.name} ${siteName} ${getFieldValue('siteArea')} ${getFieldValue('missionName')}`.trim(),
+        ScheduledDate: getFieldValue('missionDate'),
         Company: currentCompany.name,
         Site: siteName,
-        SiteOrder: form.siteOrder.value ? parseInt(form.siteOrder.value) : null,
-        Dock: form.dock.value || '',
-        Priority: parseInt(form.missionPriority.value) || 3, // Integer 1-5
+        Priority: parseInt(getFieldValue('missionPriority')) || 3, // Integer 1-5
         MissionType: missionTypeForForm,
         Frequency: frequency,
         MissionPlan: 'New Request',
-        PlannedFlightTime: form.plannedFlightTime.value ? parseFloat(form.plannedFlightTime.value) : null,
         JobStatus: 'Incomplete',
-        Comments: form.missionName.value,
-        CustomerComments: form.customerComment.value || '',
-        RequestedBy: form.submitterName.value,
-        EmailContact: form.submitterEmail.value,
-        PhContact: form.contactNumber.value || '',
+        Comments: getFieldValue('missionName'),
+        CustomerComments: getFieldValue('customerComment'),
+        RequestedBy: getFieldValue('submitterName'),
+        EmailContact: getFieldValue('submitterEmail'),
+        PhContact: getFieldValue('contactNumber'),
         Attachment: hasAttachments ? 'Yes' : 'No',
-        CustomerParameters: form.customParams.checked ? 'Yes' : 'No',
+        CustomerParameters: form.customParams && form.customParams.checked ? 'Yes' : 'No',
         
         // Custom parameters (only if enabled)
-        Resolution: form.customParams.checked && form.imageResolution.value ? parseFloat(form.imageResolution.value) : null,
-        HeightAGL: form.customParams.checked && form.missionHeight.value ? parseInt(form.missionHeight.value) : null,
-        SideOverlap: form.customParams.checked && form.overlapSide.value ? parseInt(form.overlapSide.value) : null,
-        ForwardOverlap: form.customParams.checked && form.overlapForward.value ? parseInt(form.overlapForward.value) : null,
-        TerrainFollow: form.customParams.checked ? (form.terrainFollowing.value || '') : '',
-        ElevOpt: form.customParams.checked ? (form.elevationOptimisation.value || '') : '',
+        Resolution: form.customParams && form.customParams.checked && getFieldValue('imageResolution') ? parseFloat(getFieldValue('imageResolution')) : null,
+        HeightAGL: form.customParams && form.customParams.checked && getFieldValue('missionHeight') ? parseInt(getFieldValue('missionHeight')) : null,
+        SideOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapSide') ? parseInt(getFieldValue('overlapSide')) : null,
+        ForwardOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapForward') ? parseInt(getFieldValue('overlapForward')) : null,
+        TerrainFollow: form.customParams && form.customParams.checked ? getFieldValue('terrainFollowing') : '',
+        ElevOpt: form.customParams && form.customParams.checked ? getFieldValue('elevationOptimisation') : '',
         
         // === METADATA ===
-        SiteArea: form.siteArea.value,
-        SiteKey: form.siteSelection.value,
+        SiteArea: getFieldValue('siteArea'),
+        SiteKey: getFieldValue('siteSelection'),
         SubmittedAt: new Date().toISOString(),
         
         // File names only
@@ -571,116 +635,6 @@ function validateFormData(data) {
     }
 
     return true;
-}
-
-// Add this to the handleSubmit function before calling collectFormData()
-async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (isSubmitting) return;
-    
-    if (!document.getElementById('siteSelection').value) {
-        alert('Please select a site.');
-        return;
-    }
-
-    // Check EmailJS configuration
-    if (EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY') {
-        alert('EmailJS is not configured. Please update EMAILJS_CONFIG in app.js');
-        return;
-    }
-
-    isSubmitting = true;
-
-    const submitBtn = document.getElementById('submitBtn');
-    const btnText = submitBtn.querySelector('.btn-text');
-    const btnLoading = submitBtn.querySelector('.btn-loading');
-
-    btnText.style.display = 'none';
-    btnLoading.style.display = 'inline-flex';
-    submitBtn.disabled = true;
-
-    try {
-        // Validate form first
-        validateForm();
-        
-        const formData = collectFormData();
-        const refId = await sendViaEmailJS(formData);
-
-        document.getElementById('missionId').textContent = refId;
-        document.getElementById('successModal').style.display = 'flex';
-
-    } catch (error) {
-        console.error('Submission error:', error);
-        document.getElementById('errorMessage').textContent = error.message || 'An error occurred while submitting your request.';
-        document.getElementById('errorModal').style.display = 'flex';
-    } finally {
-        btnText.style.display = 'inline';
-        btnLoading.style.display = 'none';
-        submitBtn.disabled = false;
-        isSubmitting = false;
-    }
-}
-
-// Add this validation function
-function validateForm() {
-    const form = document.getElementById('missionForm');
-    
-    // Basic HTML5 validation
-    if (!form.checkValidity()) {
-        // Find first invalid field
-        const invalidField = form.querySelector(':invalid');
-        if (invalidField) {
-            invalidField.focus();
-            invalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        throw new Error('Please fill in all required fields correctly.');
-    }
-    
-    // Additional custom validation
-    const missionDate = document.getElementById('missionDate').value;
-    const selectedDate = new Date(missionDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (selectedDate < today) {
-        document.getElementById('missionDate').focus();
-        throw new Error('Scheduled date cannot be in the past');
-    }
-    
-    // Validate custom parameters if enabled
-    if (document.getElementById('customParams').checked) {
-        const resolution = document.getElementById('imageResolution').value;
-        if (resolution && (resolution < 0.5 || resolution > 20)) {
-            document.getElementById('imageResolution').focus();
-            throw new Error('Image Resolution must be between 0.5 and 20 cm/px');
-        }
-        
-        const height = document.getElementById('missionHeight').value;
-        if (height && (height < 30 || height > 400)) {
-            document.getElementById('missionHeight').focus();
-            throw new Error('Mission Height must be between 30 and 400 meters');
-        }
-        
-        const forwardOverlap = document.getElementById('overlapForward').value;
-        if (forwardOverlap && (forwardOverlap < 50 || forwardOverlap > 95)) {
-            document.getElementById('overlapForward').focus();
-            throw new Error('Forward Overlap must be between 50% and 95%');
-        }
-        
-        const sideOverlap = document.getElementById('overlapSide').value;
-        if (sideOverlap && (sideOverlap < 50 || sideOverlap > 95)) {
-            document.getElementById('overlapSide').focus();
-            throw new Error('Side Overlap must be between 50% and 95%');
-        }
-    }
-    
-    // Validate file sizes
-    uploadedFiles.forEach(file => {
-        if (file.size > 25 * 1024 * 1024) {
-            throw new Error(`File "${file.name}" is too large. Maximum size is 25MB.`);
-        }
-    });
 }
 
     async function sendViaEmailJS(formData) {
