@@ -204,32 +204,135 @@
                     </div>
                 </section>
 
-                <!-- Section 4: Schedule -->
-                <section class="form-section">
-                    <h2 class="section-title">
-                        <span class="section-number">4</span>
-                        Schedule
-                    </h2>
-                    
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="missionDate">Scheduled Date *</label>
-                            <input type="date" id="missionDate" name="missionDate" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="missionPriority">Mission Priority *</label>
-                            <select id="missionPriority" name="missionPriority" required>
-                                <option value="">Select priority...</option>
-                                <option value="1">1 - Critical (Same Day)</option>
-                                <option value="2">2 - High (Within 2 Days)</option>
-                                <option value="3" selected>3 - Medium (Within Week)</option>
-                                <option value="4">4 - Low (When Available)</option>
-                                <option value="5">5 - Flexible (No Rush)</option>
-                            </select>
-                        </div>
-                    </div>
-                </section>
+                <!-- Update the Schedule section in index.html -->
+<section class="form-section">
+    <h2 class="section-title">
+        <span class="section-number">4</span>
+        Schedule
+    </h2>
+    
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="missionDate">Scheduled Date *</label>
+            <input type="date" id="missionDate" name="missionDate" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="missionPriority">
+                Mission Priority *
+                <button type="button" class="help-icon" id="priorityHelp" aria-label="Show priority breakdown">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                </button>
+            </label>
+            <select id="missionPriority" name="missionPriority" required>
+                <option value="">Select priority...</option>
+                <option value="1">1 - Critical</option>
+                <option value="2">2 - High</option>
+                <option value="3" selected>3 - Medium</option>
+                <option value="4">4 - Low</option>
+                <option value="5">5 - Flexible</option>
+            </select>
+        </div>
+    </div>
+</section>
+
+<!-- Add new section after Site Selection -->
+<section class="form-section">
+    <h2 class="section-title">
+        <span class="section-number">2</span>
+        Flight Details
+    </h2>
+    
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="siteOrder">Site Order</label>
+            <input type="number" id="siteOrder" name="siteOrder" min="1" step="1" placeholder="e.g., 1">
+            <small class="field-hint">Optional: Site sequence number</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="dock">Dock</label>
+            <input type="text" id="dock" name="dock" placeholder="e.g., Dock A">
+            <small class="field-hint">Optional: Dock or station location</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="plannedFlightTime">Planned Flight Time (hours)</label>
+            <input type="number" id="plannedFlightTime" name="plannedFlightTime" step="0.1" min="0.1" max="24" placeholder="e.g., 2.5">
+            <small class="field-hint">Estimated flight duration</small>
+        </div>
+    </div>
+</section>
+
+<!-- Add Priority Help Modal at the bottom before closing body tag -->
+<div class="modal-overlay" id="priorityHelpModal" style="display: none;">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Priority Breakdown</h2>
+            <button type="button" class="modal-close" onclick="document.getElementById('priorityHelpModal').style.display='none'">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="priority-breakdown">
+            <div class="priority-item">
+                <span class="priority-number">1</span>
+                <div class="priority-content">
+                    <h3>Urgent</h3>
+                    <p>Missions required to be flown in next 30 minutes or time-dependent missions.</p>
+                    <p class="priority-example"><strong>Example:</strong> ASAP for operational reasons or blast surveys.</p>
+                </div>
+            </div>
+            <div class="priority-item">
+                <span class="priority-number">2</span>
+                <div class="priority-content">
+                    <h3>High</h3>
+                    <p>To be completed within 4 hours. Add time requirement in comments.</p>
+                    <p class="priority-example"><strong>Example:</strong> Daily panoramic flights or semi-urgent unscheduled jobs.</p>
+                </div>
+            </div>
+            <div class="priority-item">
+                <span class="priority-number">3</span>
+                <div class="priority-content">
+                    <h3>Medium</h3>
+                    <p>Ideally complete before 13:00.</p>
+                    <p class="priority-example"><strong>Example:</strong> Survey flights that require processing due that day.</p>
+                </div>
+            </div>
+            <div class="priority-item">
+                <span class="priority-number">4</span>
+                <div class="priority-content">
+                    <h3>Low</h3>
+                    <p>Can be completed by end of day.</p>
+                </div>
+            </div>
+            <div class="priority-item">
+                <span class="priority-number">5</span>
+                <div class="priority-content">
+                    <h3>Flexible</h3>
+                    <p>Not urgent. Can be completed the next day.</p>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="modal-btn" onclick="document.getElementById('priorityHelpModal').style.display='none'">Close</button>
+    </div>
+</div>
+
+<script>
+    // Add priority help button functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const priorityHelpBtn = document.getElementById('priorityHelp');
+        if (priorityHelpBtn) {
+            priorityHelpBtn.addEventListener('click', function() {
+                document.getElementById('priorityHelpModal').style.display = 'flex';
+            });
+        }
+    });
+</script>
 
                 <!-- Section 5: Contact -->
                 <section class="form-section">
