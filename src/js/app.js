@@ -164,6 +164,46 @@
         setupEventListeners();
         setupMapWidgetListener();
         setDefaultDate();
+
+        // Priority tooltip functionality
+        const priorityHelpButton = document.getElementById('priorityHelpButton');
+        const priorityTooltip = document.getElementById('priorityTooltip');
+
+        if (priorityHelpButton && priorityTooltip) {
+            // Toggle tooltip on button click
+            priorityHelpButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                priorityTooltip.classList.toggle('show');
+            });
+
+            // Close tooltip when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!priorityHelpButton.contains(e.target) && !priorityTooltip.contains(e.target)) {
+                    priorityTooltip.classList.remove('show');
+                }
+            });
+
+            // Close tooltip on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    priorityTooltip.classList.remove('show');
+                }
+            });
+        }
+
+        // Optional: Show tooltip automatically when Priority 2 is selected
+        const missionPrioritySelect = document.getElementById('missionPriority');
+        missionPrioritySelect.addEventListener('change', function() {
+            if (this.value === '2' && priorityTooltip) {
+                // Show tooltip to remind about time requirement
+                priorityTooltip.classList.add('show');
+
+                // Auto-hide after 8 seconds
+                setTimeout(() => {
+                    priorityTooltip.classList.remove('show');
+                }, 8000);
+            }
+        });
     }
 
     function showInvalidCompany() {
