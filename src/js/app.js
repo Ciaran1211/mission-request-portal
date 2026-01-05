@@ -387,77 +387,241 @@
         }
     }
 
-    function collectFormData() {
-        const form = document.getElementById('missionForm');
-        const frequencyType = document.querySelector('input[name="frequencyType"]:checked').value;
-        const isRepeating = frequencyType === 'Repeating';
-        const dateFormatted = formatDateYYMMDD(form.missionDate.value);
-        const siteName = currentSite ? currentSite.name : form.siteSelection.value;
+    // Update the collectFormData function to match the schema
+function collectFormData() {
+    const form = document.getElementById('missionForm');
+    const frequencyType = document.querySelector('input[name="frequencyType"]:checked').value;
+    const isRepeating = frequencyType === 'Repeating';
+    const dateFormatted = formatDateYYMMDD(form.missionDate.value);
+    const siteName = currentSite ? currentSite.name : form.siteSelection.value;
 
-        // Priority mapping
-        const priorityMap = {
-            '1': '1 - Critical',
-            '2': '2 - High',
-            '3': '3 - Medium',
-            '4': '4 - Low',
-            '5': '5 - Flexible'
-        };
-
-        // Frequency value
-        let frequency = 'Once';
-        if (isRepeating && form.repeatFrequency.value) {
-            frequency = form.repeatFrequency.value;
-        }
-
-        const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
-
-        // Build SharePoint-ready data object
-        const data = {
-            // === SHAREPOINT FIELDS ===
-            Title: `${dateFormatted} ${currentCompany.name} ${siteName} ${form.siteArea.value} ${form.missionName.value}`.trim(),
-            ScheduledDate: form.missionDate.value,
-            Company: currentCompany.name,
-            Site: siteName,
-            Priority: priorityMap[form.missionPriority.value] || '3 - Medium',
-            MissionType: form.missionType.value,
-            Frequency: frequency,
-            MissionPlan: 'New Request',
-            JobStatus: 'Incomplete',
-            Comments: form.missionName.value,
-            CustomerComments: form.customerComment.value || '',
-            RequestedBy: form.submitterName.value,
-            EmailContact: form.submitterEmail.value,
-            PhContact: form.contactNumber.value || '',
-            Attachment: hasAttachments ? 'Yes' : 'No',
-            CustomerParameters: form.customParams.checked ? 'Yes' : 'No',
-            
-            // Custom parameters (only if enabled)
-            Resolution: form.customParams.checked && form.imageResolution.value ? parseFloat(form.imageResolution.value) : null,
-            HeightAGL: form.customParams.checked && form.missionHeight.value ? parseFloat(form.missionHeight.value) : null,
-            SideOverlap: form.customParams.checked && form.overlapSide.value ? parseFloat(form.overlapSide.value) : null,
-            ForwardOverlap: form.customParams.checked && form.overlapForward.value ? parseFloat(form.overlapForward.value) : null,
-            TerrainFollow: form.customParams.checked ? (form.terrainFollowing.value || null) : null,
-            ElevOpt: form.customParams.checked ? (form.elevationOptimisation.value || null) : null,
-            
-            // === METADATA (for reference, not direct SP fields) ===
-            SiteArea: form.siteArea.value,
-            SiteKey: form.siteSelection.value,
-            SubmittedAt: new Date().toISOString(),
-            
-            // File names only (files can't be sent via email easily)
-            AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
-            HasKML: currentKmlData ? 'Yes' : 'No'
-        };
-
-        // Remove null values for cleaner JSON
-        Object.keys(data).forEach(key => {
-            if (data[key] === null || data[key] === undefined) {
-                delete data[key];
-            }
-        });
-
-        return data;
+    // Frequency value
+    let frequency = 'Once';
+    if (isRepeating && form.repeatFrequency.value) {
+        frequency = form.repeatFrequency.value;
     }
+
+    const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
+
+    // Build SharePoint-ready data object matching the schema
+    const data = {
+        // === SHAREPOINT FIELDS ===
+        Title: `${dateFormatted} ${currentCompany.name} ${siteName} ${form.siteArea.value} ${form.missionName.value}`.trim(),
+        ScheduledDate: form.missionDate.value,
+        Company: currentCompany.name,
+        Site: siteName,
+        'Site Order': form.siteOrder.value ? parseInt(form.siteOrder.value) : null,
+        Dock: form.dock.value || '',
+        Priority: parseInt(form.missionPriority.value) || 3, // Integer 1-5
+        MissionType: form.missionType.value,
+        Frequency: frequency,
+        MissionPlan: 'New Request',
+        PlannedFlightTime: form.plannedFlightTime.value ? parseFloat(form.plannedFlightTime.value) : null,
+        JobStatus: 'Incomplete',
+        Comments: form.missionName.value,
+        CustomerComments: form.customerComment.value || '',
+        RequestedBy: form.submitterName.value,
+        EmailContact: form.submitterEmail.value,
+        PhContact: form.contactNumber.value || '',
+        Attachment: hasAttachments ? 'Yes' : 'No',
+        CustomerParameters: form.customParams.checked ? 'Yes' : 'No',
+        
+        // Custom parameters (only if enabled)
+        Resolution: form.customParams.checked && form.imageResolution.value ? parseFloat(form.imageResolution.value) : null,
+        HeightAGL: form.customParams.checked && form.missionHeight.value ? parseInt(form.missionHeight.value) : null,
+        SideOverlap: form.customParams.checked && form.overlapSide.value ? parseInt(form.overlapSide.value) : null,
+        ForwardOverlap: form.customParams.checked && form.overlapForward.value ? parseInt(form.overlapForward.value) : null,
+        TerrainFollow: form.customParams.checked ? (form.terrainFollowing.value || '') : '',
+        ElevOpt: form.customParams.checked ? (form.elevationOptimisation.value || '') : '',
+        
+        // === METADATA ===
+        SiteArea: form.siteArea.value,
+        SiteKey: form.siteSelection.value,
+        SubmittedAt: new Date().toISOString(),
+        
+        // File names only
+        AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
+        HasKML: currentKmlData ? 'Yes' : 'No'
+    };
+
+    // Validate data types according to schema
+    validateFormData(data);
+
+    // Remove null values for cleaner JSON
+    Object.keys(data).forEach(key => {
+        if (data[key] === null || data[key] === undefined || data[key] === '') {
+            delete data[key];
+        }
+    });
+
+    return data;
+}
+
+// Add validation function
+function validateFormData(data) {
+    // Validate required fields
+    const requiredFields = ['Title', 'ScheduledDate', 'Company', 'Site', 'Priority', 'MissionType', 'RequestedBy', 'EmailContact'];
+    requiredFields.forEach(field => {
+        if (!data[field]) {
+            throw new Error(`${field} is required`);
+        }
+    });
+
+    // Validate data types
+    if (data.Priority && (data.Priority < 1 || data.Priority > 5)) {
+        throw new Error('Priority must be between 1 and 5');
+    }
+
+    if (data['Site Order'] && !Number.isInteger(data['Site Order'])) {
+        throw new Error('Site Order must be an integer');
+    }
+
+    if (data.PlannedFlightTime && typeof data.PlannedFlightTime !== 'number') {
+        throw new Error('Planned Flight Time must be a number');
+    }
+
+    if (data.Resolution && typeof data.Resolution !== 'number') {
+        throw new Error('Resolution must be a number');
+    }
+
+    if (data.HeightAGL && !Number.isInteger(data.HeightAGL)) {
+        throw new Error('Height AGL must be an integer');
+    }
+
+    if (data.SideOverlap && !Number.isInteger(data.SideOverlap)) {
+        throw new Error('Side Overlap must be an integer');
+    }
+
+    if (data.ForwardOverlap && !Number.isInteger(data.ForwardOverlap)) {
+        throw new Error('Forward Overlap must be an integer');
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (data.EmailContact && !emailRegex.test(data.EmailContact)) {
+        throw new Error('Please enter a valid email address');
+    }
+
+    // Validate date is not in the past
+    const selectedDate = new Date(data.ScheduledDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (selectedDate < today) {
+        throw new Error('Scheduled date cannot be in the past');
+    }
+
+    return true;
+}
+
+// Add this to the handleSubmit function before calling collectFormData()
+async function handleSubmit(e) {
+    e.preventDefault();
+
+    if (isSubmitting) return;
+    
+    if (!document.getElementById('siteSelection').value) {
+        alert('Please select a site.');
+        return;
+    }
+
+    // Check EmailJS configuration
+    if (EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY') {
+        alert('EmailJS is not configured. Please update EMAILJS_CONFIG in app.js');
+        return;
+    }
+
+    isSubmitting = true;
+
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = submitBtn.querySelector('.btn-text');
+    const btnLoading = submitBtn.querySelector('.btn-loading');
+
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline-flex';
+    submitBtn.disabled = true;
+
+    try {
+        // Validate form first
+        validateForm();
+        
+        const formData = collectFormData();
+        const refId = await sendViaEmailJS(formData);
+
+        document.getElementById('missionId').textContent = refId;
+        document.getElementById('successModal').style.display = 'flex';
+
+    } catch (error) {
+        console.error('Submission error:', error);
+        document.getElementById('errorMessage').textContent = error.message || 'An error occurred while submitting your request.';
+        document.getElementById('errorModal').style.display = 'flex';
+    } finally {
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+        submitBtn.disabled = false;
+        isSubmitting = false;
+    }
+}
+
+// Add this validation function
+function validateForm() {
+    const form = document.getElementById('missionForm');
+    
+    // Basic HTML5 validation
+    if (!form.checkValidity()) {
+        // Find first invalid field
+        const invalidField = form.querySelector(':invalid');
+        if (invalidField) {
+            invalidField.focus();
+            invalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        throw new Error('Please fill in all required fields correctly.');
+    }
+    
+    // Additional custom validation
+    const missionDate = document.getElementById('missionDate').value;
+    const selectedDate = new Date(missionDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+        document.getElementById('missionDate').focus();
+        throw new Error('Scheduled date cannot be in the past');
+    }
+    
+    // Validate custom parameters if enabled
+    if (document.getElementById('customParams').checked) {
+        const resolution = document.getElementById('imageResolution').value;
+        if (resolution && (resolution < 0.5 || resolution > 20)) {
+            document.getElementById('imageResolution').focus();
+            throw new Error('Image Resolution must be between 0.5 and 20 cm/px');
+        }
+        
+        const height = document.getElementById('missionHeight').value;
+        if (height && (height < 30 || height > 400)) {
+            document.getElementById('missionHeight').focus();
+            throw new Error('Mission Height must be between 30 and 400 meters');
+        }
+        
+        const forwardOverlap = document.getElementById('overlapForward').value;
+        if (forwardOverlap && (forwardOverlap < 50 || forwardOverlap > 95)) {
+            document.getElementById('overlapForward').focus();
+            throw new Error('Forward Overlap must be between 50% and 95%');
+        }
+        
+        const sideOverlap = document.getElementById('overlapSide').value;
+        if (sideOverlap && (sideOverlap < 50 || sideOverlap > 95)) {
+            document.getElementById('overlapSide').focus();
+            throw new Error('Side Overlap must be between 50% and 95%');
+        }
+    }
+    
+    // Validate file sizes
+    uploadedFiles.forEach(file => {
+        if (file.size > 25 * 1024 * 1024) {
+            throw new Error(`File "${file.name}" is too large. Maximum size is 25MB.`);
+        }
+    });
+}
 
     async function sendViaEmailJS(formData) {
         const refId = `MR-${Date.now().toString(36).toUpperCase()}`;
