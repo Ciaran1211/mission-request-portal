@@ -661,6 +661,7 @@ input[type="radio"]:checked + .toggle-option svg {
     margin-top: 8px;
     position: relative;
     width: 100%;
+    z-index: 100;
 }
 
 .priority-help-button {
@@ -701,7 +702,7 @@ input[type="radio"]:checked + .toggle-option svg {
     padding: 20px;
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--gray-200);
-    z-index: 50;
+    z-index: 1000;
     margin-top: 8px;
     opacity: 0;
     visibility: hidden;
