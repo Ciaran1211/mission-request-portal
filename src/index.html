@@ -12,7 +12,7 @@
     <!-- EmailJS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="app-container">
@@ -44,11 +44,11 @@
         <main class="main-content" id="mainContent">
             <form id="missionForm" class="mission-form">
                 
-                <!-- Section 1: Site Selection -->
+                <!-- Section 1: Site Selection & Request Type -->
                 <section class="form-section">
                     <h2 class="section-title">
                         <span class="section-number">1</span>
-                        Site Selection
+                        Site & Request Type
                     </h2>
                     
                     <div class="form-grid">
@@ -58,37 +58,152 @@
                                 <option value="">Select a site...</option>
                             </select>
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="siteArea">Site Area *</label>
-                            <select id="siteArea" name="siteArea" required>
-                                <option value="">Select site first...</option>
-                            </select>
-                        </div>
                     </div>
 
-                    <!-- Map Widget (embedded iframe) -->
-                    <div class="map-section">
-                        <h3>Draw Mission Area</h3>
-                        <p class="map-instructions">Use the drawing tools to outline your mission area on the map. Select a site first to load the correct location.</p>
-                        
-                        <div class="map-widget-container">
-                            <iframe 
-                                id="mapWidgetFrame" 
-                                src="map-widget.html" 
-                                frameborder="0"
-                                allowfullscreen
-                            ></iframe>
+                    <!-- Request Type Toggle -->
+                    <div class="request-type-section" style="margin-top: 20px;">
+                        <label style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 10px; display: block;">Request Type *</label>
+                        <div class="request-type-toggle">
+                            <input type="radio" id="singleRequest" name="requestType" value="single" checked>
+                            <label for="singleRequest" class="toggle-option">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                                </svg>
+                                Single Request
+                            </label>
+
+                            <input type="radio" id="repeatMission" name="requestType" value="repeat">
+                            <label for="repeatMission" class="toggle-option">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 2l4 4-4 4"/>
+                                    <path d="M3 11v-1a4 4 0 014-4h14"/>
+                                    <path d="M7 22l-4-4 4-4"/>
+                                    <path d="M21 13v1a4 4 0 01-4 4H3"/>
+                                </svg>
+                                Repeat Missions
+                            </label>
                         </div>
                     </div>
                 </section>
 
-                <!-- Section 2: Mission Details -->
-                <section class="form-section">
+                <!-- Repeat Missions Section (hidden by default) -->
+                <section class="form-section" id="repeatMissionSection" style="display: none;">
                     <h2 class="section-title">
                         <span class="section-number">2</span>
-                        Mission Details
+                        Select Repeat Missions
                     </h2>
+
+                    <p class="section-description" style="color: var(--gray-600); margin-bottom: 16px;">
+                        Select the repeat missions you want to request for the scheduled date. Add a KML reference or comment for each mission if needed.
+                    </p>
+
+                    <div class="repeat-missions-table-container">
+                        <table class="repeat-missions-table">
+                            <thead>
+                                <tr>
+                                    <th>Mission</th>
+                                    <th>KML Reference / Comment</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="repeatMissionsTableBody">
+                                <!-- Rows added dynamically -->
+                            </tbody>
+                        </table>
+
+                        <button type="button" class="add-row-btn" id="addRepeatMissionRow">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 8v8M8 12h8"/>
+                            </svg>
+                            Add Another Mission
+                        </button>
+                    </div>
+
+                    <!-- Schedule for Repeat Missions -->
+                    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(10, 186, 239, 0.2);">
+                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--navy);">Schedule</h3>
+                        <div class="form-group" style="max-width: 300px;">
+                            <label for="repeatMissionDate">Required Mission Date *</label>
+                            <input type="date" id="repeatMissionDate" name="repeatMissionDate">
+                        </div>
+                    </div>
+
+                    <!-- Contact for Repeat Missions -->
+                    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(10, 186, 239, 0.2);">
+                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--navy);">Contact Information</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="repeatSubmitterName">Your Name *</label>
+                                <input type="text" id="repeatSubmitterName" name="repeatSubmitterName">
+                            </div>
+                            <div class="form-group">
+                                <label for="repeatSubmitterEmail">Email *</label>
+                                <input type="email" id="repeatSubmitterEmail" name="repeatSubmitterEmail">
+                            </div>
+                            <div class="form-group">
+                                <label for="repeatContactNumber">Contact Number</label>
+                                <input type="tel" id="repeatContactNumber" name="repeatContactNumber" placeholder="+61 4XX XXX XXX">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload for Repeat Missions -->
+                    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(10, 186, 239, 0.2);">
+                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--navy);">Attachments</h3>
+                        <div class="file-upload-area" id="repeatFileUploadArea">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                            </svg>
+                            <p>Drag and drop files here, or <span class="browse-link">browse</span></p>
+                            <p class="file-types">Supports: KML, KMZ, PDF, Images</p>
+                            <input type="file" id="repeatFileInput" name="repeatAttachments" multiple accept=".kml,.kmz,.pdf,.png,.jpg,.jpeg" hidden>
+                        </div>
+                        <div class="file-list" id="repeatFileList"></div>
+                    </div>
+                </section>
+
+                <!-- Single Request Sections (wrapped in container) -->
+                <div id="singleRequestSections">
+                    <!-- Section: Site Area & Map -->
+                    <section class="form-section">
+                        <h2 class="section-title">
+                            <span class="section-number">2</span>
+                            Mission Area
+                        </h2>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="siteArea">Site Area *</label>
+                                <select id="siteArea" name="siteArea" required>
+                                    <option value="">Select site first...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Map Widget (embedded iframe) -->
+                        <div class="map-section">
+                            <h3>Draw Mission Area</h3>
+                            <p class="map-instructions">Use the drawing tools to outline your mission area on the map. Select a site first to load the correct location.</p>
+
+                            <div class="map-widget-container">
+                                <iframe
+                                    id="mapWidgetFrame"
+                                    src="map-widget.html"
+                                    frameborder="0"
+                                    allowfullscreen
+                                ></iframe>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section: Mission Details -->
+                    <section class="form-section">
+                        <h2 class="section-title">
+                            <span class="section-number">3</span>
+                            Mission Details
+                        </h2>
                     
                     <div class="form-grid">
                         <div class="form-group">
@@ -160,10 +275,10 @@
                     </div>
                 </section>
 
-                <!-- Section 3: Frequency -->
+                <!-- Section 4: Frequency -->
                 <section class="form-section">
                     <h2 class="section-title">
-                        <span class="section-number">3</span>
+                        <span class="section-number">4</span>
                         Frequency
                     </h2>
                     
@@ -204,10 +319,10 @@
                     </div>
                 </section>
 
-                <!-- Section 4: Schedule -->
+                <!-- Section 5: Schedule -->
                 <section class="form-section">
                     <h2 class="section-title">
-                        <span class="section-number">4</span>
+                        <span class="section-number">5</span>
                         Schedule
                     </h2>
 
@@ -293,11 +408,12 @@
                         </div>
                     </div>
                 </section>
+                </div><!-- End singleRequestSections -->
 
-                <!-- Section 5: Contact -->
-                <section class="form-section">
+                <!-- Section: Contact (for Single Request mode - outside singleRequestSections because of field requirements) -->
+                <section class="form-section" id="singleContactSection">
                     <h2 class="section-title">
-                        <span class="section-number">5</span>
+                        <span class="section-number">6</span>
                         Contact Information
                     </h2>
                     
@@ -317,10 +433,10 @@
                     </div>
                 </section>
 
-                <!-- Section 6: File Upload -->
-                <section class="form-section">
+                <!-- Section: File Upload (for Single Request mode) -->
+                <section class="form-section" id="singleAttachmentsSection">
                     <h2 class="section-title">
-                        <span class="section-number">6</span>
+                        <span class="section-number">7</span>
                         Attachments
                     </h2>
                     
@@ -387,7 +503,7 @@
         </div>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="app.js"></script>
 
     <!-- Priority Tooltip Script -->
     <script>
