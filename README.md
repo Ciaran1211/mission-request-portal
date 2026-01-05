@@ -1,214 +1,240 @@
 # Mission Request Portal
 
-A web application for submitting drone mission requests. Uses Power Automate to connect to SharePoint - no Azure AD admin access required.
+A web application for submitting drone mission requests. Uses EmailJS + Power Automate email trigger to connect to SharePoint - completely free, no premium licenses needed.
 
-## Features
-
-- **Company-specific URLs**: Each company gets their own form link (e.g., `?company=BMA`)
-- **Dynamic Site Selection**: Sites and areas cascade based on company
-- **Interactive Map Widget**: Draw mission areas with polygon, rectangle, circle, line, and point tools
-- **Custom Flight Parameters**: Optionally specify resolution, height, overlap, terrain following
-- **File Attachments**: Upload KML, PDF, images, and shapefiles
-- **Power Automate Integration**: Connects to SharePoint via webhook (no admin permissions needed)
-
----
-
-## Architecture
+## How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Azure Static Web Apps                        │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │              Frontend                                    │    │
-│  │  • src/index.html (form)                                │    │
-│  │  • src/map-widget.html (embedded map iframe)            │    │
-│  │  • src/js/app.js                                        │    │
-│  └─────────────────────────────────────────────────────────┘    │
-│                              │                                   │
-│                              ▼                                   │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │              Azure Function (API)                        │    │
-│  │  • api/SubmitMission/index.js                           │    │
-│  └─────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-                    ┌─────────────────┐
-                    │  Power Automate │
-                    │  Webhook Flow   │
-                    └─────────────────┘
-                               │
-                               ▼
-                    ┌─────────────────┐
-                    │   SharePoint    │
-                    │      List       │
-                    └─────────────────┘
+┌──────────────┐      ┌──────────────┐      ┌─────────────────┐      ┌────────────┐
+│   Web Form   │ ──── │   EmailJS    │ ──── │ Power Automate  │ ──── │ SharePoint │
+│              │      │  (sends      │      │ (email trigger, │      │   List     │
+│              │      │   email)     │      │  parses JSON)   │      │            │
+└──────────────┘      └──────────────┘      └─────────────────┘      └────────────┘
 ```
 
 ---
 
 ## Setup Guide
 
-### Step 1: Create Power Automate Flow
+### Step 1: Set Up EmailJS (5 minutes)
+
+1. Go to [emailjs.com](https://www.emailjs.com/) → Sign up (free: 200 emails/month)
+
+2. **Add Email Service:**
+   - Go to **Email Services** → **Add New Service**
+   - Choose Gmail, Outlook, or other
+   - Connect your account
+   - Note the **Service ID** (e.g., `service_abc123`)
+
+3. **Create Email Template:**
+   - Go to **Email Templates** → **Create New Template**
+   - Set **To Email**: Your email that Power Automate monitors
+   - Set **Subject**: `[MISSION REQUEST] {{title}}`
+   - Set **Content**:
+
+```
+Reference: {{ref_id}}
+Company: {{company}}
+Site: {{site}} - {{site_area}}
+Mission: {{mission_name}}
+Type: {{mission_type}}
+Date: {{scheduled_date}}
+Priority: {{priority}}
+Requested by: {{requested_by}}
+Email: {{email}}
+Phone: {{phone}}
+
+===JSON_START===
+{{json_data}}
+===JSON_END===
+
+Submitted: {{submitted_at}}
+```
+
+   - Click **Save**
+   - Note the **Template ID** (e.g., `template_xyz789`)
+
+4. **Get Public Key:**
+   - Go to **Account** → **API Keys**
+   - Note the **Public Key**
+
+5. **Update app.js:**
+   - Edit `src/js/app.js`
+   - Find `EMAILJS_CONFIG` at the top and fill in:
+
+```javascript
+const EMAILJS_CONFIG = {
+    publicKey: 'your_public_key_here',
+    serviceId: 'your_service_id_here',
+    templateId: 'your_template_id_here'
+};
+```
+
+---
+
+### Step 2: Create Power Automate Flow (10 minutes)
 
 1. Go to [make.powerautomate.com](https://make.powerautomate.com)
 
-2. Click **Create** → **Instant cloud flow**
+2. **Create** → **Automated cloud flow**
 
-3. Name: `Mission Request Webhook`
+3. **Flow name**: `Mission Request - Email to SharePoint`
 
-4. Trigger: **When an HTTP request is received**
+4. **Trigger**: Search `When a new email arrives (V3)` → Select it → **Create**
 
-5. Click **Create**
+5. **Configure trigger:**
+   - **Folder**: Inbox
+   - **Subject Filter**: `[MISSION REQUEST]`
+   - **Include Attachments**: No
 
-6. In the HTTP trigger, click **Use sample payload to generate schema** and paste:
+---
+
+#### Add Action: Extract JSON
+
+6. Click **+ New step** → Search **Compose** → Select it
+
+7. **Rename** to `Extract JSON`
+
+8. In **Inputs**, paste this expression:
+
+```
+substring(
+  triggerOutputs()?['body/body'],
+  add(indexOf(triggerOutputs()?['body/body'], '===JSON_START==='), 16),
+  sub(indexOf(triggerOutputs()?['body/body'], '===JSON_END==='), add(indexOf(triggerOutputs()?['body/body'], '===JSON_START==='), 16))
+)
+```
+
+---
+
+#### Add Action: Parse JSON
+
+9. Click **+ New step** → Search **Parse JSON** → Select it
+
+10. **Content**: Select `Outputs` from the `Extract JSON` step (Dynamic content)
+
+11. **Schema** - Click "Use sample payload" and paste:
 
 ```json
 {
-    "Title": "250104 BMA Saraji 6W Test Mission",
-    "Scheduled Date": "2025-01-04",
-    "Company": "BMA",
-    "Site": "Saraji",
-    "Priority": "3 - Medium",
-    "Mission Type": "Survey - Nadir (standard mapping survey)",
-    "Frequency": "Once",
-    "Mission Plan": "New Request",
-    "Job Status": "Incomplete",
-    "Comments": "Test Mission",
-    "Customer Comments": "Please survey the northern section",
-    "Requested by": "John Smith",
-    "Email contact": "john.smith@example.com",
-    "Ph. Contact": "+61 400 000 000",
-    "Attachment?": "No",
-    "Customer Parameters?": "Yes",
-    "Resolution": 2.5,
-    "Height (mAGL)": 100,
-    "Side Overlap (%)": 65,
-    "Forward Overlap (%)": 75,
-    "Terrain Follow?": "Yes",
-    "Elev. Opt?": "No",
-    "_siteArea": "6W",
-    "_kmlData": "",
-    "_submittedAt": "2025-01-04T10:30:00.000Z"
+  "Title": "250104 BMA Saraji 6W Test Mission",
+  "ScheduledDate": "2025-01-04",
+  "Company": "BMA",
+  "Site": "Saraji",
+  "Priority": "3 - Medium",
+  "MissionType": "Survey - Nadir (standard mapping survey)",
+  "Frequency": "Once",
+  "MissionPlan": "New Request",
+  "JobStatus": "Incomplete",
+  "Comments": "Test Mission",
+  "CustomerComments": "Survey the area",
+  "RequestedBy": "John Smith",
+  "EmailContact": "john@example.com",
+  "PhContact": "+61 400 000 000",
+  "Attachment": "No",
+  "CustomerParameters": "Yes",
+  "Resolution": 2.5,
+  "HeightAGL": 100,
+  "SideOverlap": 65,
+  "ForwardOverlap": 75,
+  "TerrainFollow": "Yes",
+  "ElevOpt": "No",
+  "SiteArea": "6W",
+  "SiteKey": "saraji",
+  "SubmittedAt": "2025-01-04T10:30:00.000Z",
+  "AttachmentNames": "None",
+  "HasKML": "No"
 }
 ```
 
-7. Click **+ New step** → Search **SharePoint** → **Create item**
+---
 
-8. Configure SharePoint action:
-   - **Site Address**: Select your SharePoint site
-   - **List Name**: Select your list
-   - Map the fields from Dynamic content:
+#### Add Action: Create SharePoint Item
 
-| SharePoint Field | Dynamic Content |
-|-----------------|-----------------|
+12. Click **+ New step** → Search **SharePoint Create item** → Select it
+
+13. **Site Address**: Select your SharePoint site
+
+14. **List Name**: Select your list
+
+15. **Map the fields** from Dynamic content (Parse JSON step):
+
+| SharePoint Column | Dynamic Content |
+|-------------------|-----------------|
 | Title | `Title` |
-| Scheduled Date | `Scheduled Date` |
+| Scheduled Date | `ScheduledDate` |
 | Company | `Company` |
 | Site | `Site` |
 | __Priority | `Priority` |
-| Mission Type | `Mission Type` |
+| Mission Type | `MissionType` |
 | Frequency | `Frequency` |
-| Mission Plan | `Mission Plan` |
-| Job Status | `Job Status` |
+| Mission Plan | `MissionPlan` |
+| Job Status | `JobStatus` |
 | Comments | `Comments` |
-| Customer Comments | `Customer Comments` |
-| Requested by | `Requested by` |
-| Email contact | `Email contact` |
-| Ph. Contact | `Ph. Contact` |
-| Attachment? | `Attachment?` |
-| Customer Parameters? | `Customer Parameters?` |
+| Customer Comments | `CustomerComments` |
+| Requested by | `RequestedBy` |
+| Email contact | `EmailContact` |
+| Ph. Contact | `PhContact` |
+| Attachment? | `Attachment` |
+| Customer Parameters? | `CustomerParameters` |
 | Resolution | `Resolution` |
-| Height (mAGL) | `Height (mAGL)` |
-| Side Overlap (%) | `Side Overlap (%)` |
-| Forward Overlap (%) | `Forward Overlap (%)` |
-| Terrain Follow? | `Terrain Follow?` |
-| Elev. Opt? | `Elev. Opt?` |
+| Height (mAGL) | `HeightAGL` |
+| Side Overlap (%) | `SideOverlap` |
+| Forward Overlap (%) | `ForwardOverlap` |
+| Terrain Follow? | `TerrainFollow` |
+| Elev. Opt? | `ElevOpt` |
 
-9. **Save** the flow
-
-10. Go back to the HTTP trigger and copy the **HTTP POST URL**
+16. Click **Save**
 
 ---
 
-### Step 2: Deploy to Azure Static Web Apps
+### Step 3: Deploy the Web Form
 
-1. Push this code to a GitHub repository
+#### Option A: Azure Static Web Apps (Recommended)
 
-2. In Azure Portal → **Create a resource** → **Static Web App**
+1. Push code to GitHub
 
-3. Configure:
-   - **Name**: `mission-request-portal`
-   - **Plan type**: `Free`
-   - **Source**: `GitHub`
-   - **Repository**: Your repo
-   - **Branch**: `main`
-   - **Build Preset**: `Custom`
-   - **App location**: `/src`
-   - **Api location**: `/api`
-   - **Output location**: (leave empty)
+2. Azure Portal → Create → Static Web App
+   - Source: GitHub
+   - Build Preset: Custom
+   - App location: `/src`
+   - Api location: (leave empty - we don't need it)
+   - Output: (leave empty)
 
-4. Click **Create**
+3. Done! Access at `https://your-app.azurestaticapps.net/?company=BMA`
 
----
+#### Option B: Any Static Hosting
 
-### Step 3: Configure Environment Variables
-
-1. In Azure Portal → Your Static Web App → **Configuration**
-
-2. Add Application Setting:
-   - **Name**: `POWER_AUTOMATE_WEBHOOK_URL`
-   - **Value**: (paste your Power Automate HTTP POST URL)
-
-3. Click **Save**
+Upload the `src` folder to:
+- Netlify
+- Vercel
+- GitHub Pages
+- Any web server
 
 ---
 
 ### Step 4: Test
 
-Access your form with a company parameter:
+1. Open form: `https://yoursite.com/?company=BMA`
 
-```
-https://your-app.azurestaticapps.net/?company=BMA
-https://your-app.azurestaticapps.net/?company=Goldfields
-https://your-app.azurestaticapps.net/?company=RioTinto
-https://your-app.azurestaticapps.net/?company=FMG
-https://your-app.azurestaticapps.net/?company=Norton
-```
+2. Fill out and submit
+
+3. Check:
+   - Email arrives in your inbox
+   - Power Automate flow runs successfully
+   - SharePoint item is created
 
 ---
 
-## SharePoint List Fields
+## Company URL Parameters
 
-Your SharePoint list should have these columns:
-
-| Column | Type | Notes |
-|--------|------|-------|
-| Title | Single line of text | Auto-generated: "YYMMDD Company Site Area MissionName" |
-| Scheduled Date | Date and Time | |
-| Company | Choice | BMA, Goldfields, RioTinto, FMG, Norton |
-| Site | Choice | Site options per company |
-| __Priority | Choice | 1 - Critical, 2 - High, 3 - Medium, 4 - Low, 5 - Flexible |
-| Mission Type | Choice | Survey - Nadir, Survey - Oblique, Inspection, Panorama, etc. |
-| Frequency | Choice | Once, Daily, Weekly, Fortnightly, Monthly, Quarterly |
-| Mission Plan | Choice | Default: "New Request" |
-| Job Status | Choice | Default: "Incomplete" |
-| Planned Flight Time (min) | Number | For repeat missions |
-| Comments | Single line of text | Mission name |
-| Attachment? | Yes/No | |
-| Customer Comments | Multiple lines of text | Description/notes |
-| Customer Parameters? | Choice | Yes/No |
-| Requested by | Single line of text | |
-| Email contact | Hyperlink or Picture | |
-| Resolution | Number | cm/px |
-| Height (mAGL) | Number | meters above ground |
-| Side Overlap (%) | Number | |
-| Forward Overlap (%) | Number | |
-| Terrain Follow? | Choice | Yes/No |
-| Elev. Opt? | Choice | Yes/No |
-| Ph. Contact | Single line of text | Phone number |
-| Site Order | Number | For repeat missions |
-| Dock | Choice | For specific sites |
+```
+?company=BMA
+?company=Goldfields
+?company=RioTinto
+?company=FMG
+?company=Norton
+```
 
 ---
 
@@ -221,7 +247,7 @@ Add to `COMPANY_CONFIG`:
 ```javascript
 'NewCompany': {
     name: 'NewCompany',
-    displayName: 'New Company Display Name',
+    displayName: 'New Company Name',
     sites: {
         'site-key': {
             name: 'Site Name',
@@ -233,7 +259,7 @@ Add to `COMPANY_CONFIG`:
 
 ### 2. Edit `src/map-widget.html`
 
-Add to `SITES` object (around line 352):
+Add to `SITES` object:
 
 ```javascript
 'site-key': {
@@ -245,67 +271,82 @@ Add to `SITES` object (around line 352):
 }
 ```
 
-For custom orthomosaic tiles, use your tile server URL instead.
+---
+
+## SharePoint List Columns
+
+| Column | Type | Notes |
+|--------|------|-------|
+| Title | Single line of text | Auto-generated |
+| Scheduled Date | Date and Time | |
+| Company | Choice | |
+| Site | Choice | |
+| __Priority | Choice | 1-Critical to 5-Flexible |
+| Mission Type | Choice | |
+| Frequency | Choice | Once, Daily, Weekly, etc. |
+| Mission Plan | Choice | Defaults to "New Request" |
+| Job Status | Choice | Defaults to "Incomplete" |
+| Planned Flight Time (min) | Number | For repeat missions |
+| Comments | Single line of text | Mission name |
+| Attachment? | Yes/No | |
+| Customer Comments | Multiple lines | |
+| Customer Parameters? | Choice | |
+| Requested by | Single line | |
+| Email contact | Hyperlink | |
+| Resolution | Number | |
+| Height (mAGL) | Number | |
+| Side Overlap (%) | Number | |
+| Forward Overlap (%) | Number | |
+| Terrain Follow? | Choice | |
+| Elev. Opt? | Choice | |
+| Ph. Contact | Single line | |
+| Site Order | Number | For repeat missions |
+| Dock | Choice | For specific sites |
 
 ---
 
-## Local Development
+## Handling Files/KML
 
-1. Install Azure Static Web Apps CLI:
-   ```bash
-   npm install -g @azure/static-web-apps-cli
-   ```
+Since email has size limits, files aren't attached. Options:
 
-2. Create `api/local.settings.json`:
-   ```json
-   {
-     "IsEncrypted": false,
-     "Values": {
-       "FUNCTIONS_WORKER_RUNTIME": "node",
-       "POWER_AUTOMATE_WEBHOOK_URL": "your-webhook-url"
-     }
-   }
-   ```
+1. **Manual**: User uploads files to SharePoint separately
 
-3. Run locally:
-   ```bash
-   swa start src --api-location api
-   ```
+2. **OneDrive Link**: Add a field for users to paste a OneDrive link
 
----
-
-## Handling Attachments
-
-The form collects files and KML data, but they're sent as base64 in `_files` and `_kmlData` fields. To handle attachments in Power Automate:
-
-### Option A: Store KML in Customer Comments
-Add a Compose action to append KML data to comments.
-
-### Option B: Save to SharePoint Document Library
-Add a "Create file" action to save attachments to a document library.
-
-### Option C: Send via Email
-Add a "Send email" action with attachments for review.
+3. **Separate Upload**: Create a separate file upload page that saves to SharePoint/OneDrive directly
 
 ---
 
 ## Troubleshooting
 
-### "Server configuration error"
-- Check that `POWER_AUTOMATE_WEBHOOK_URL` is set in Azure Static Web App Configuration
+### Emails not arriving
+- Check EmailJS dashboard for send logs
+- Verify Service ID, Template ID, and Public Key
+- Check spam folder
 
-### "Failed to submit to Power Automate"
-- Verify the webhook URL is correct
-- Check Power Automate flow run history for errors
-- Ensure the flow is turned on
+### Power Automate not triggering
+- Verify subject filter matches exactly: `[MISSION REQUEST]`
+- Check the folder is correct (Inbox)
+- Test with a manual email containing `[MISSION REQUEST]` in subject
 
-### Map not loading
-- Check browser console for errors
-- Verify the site key exists in both `app.js` and `map-widget.html`
+### JSON parse errors
+- Check the email template has correct markers: `===JSON_START===` and `===JSON_END===`
+- Look at the raw email body in flow run history
+- Verify no extra whitespace in markers
 
-### Invalid Company page shown
-- Add `?company=CompanyName` to the URL
-- Ensure company key exists in `COMPANY_CONFIG`
+### SharePoint errors
+- Verify column internal names match (use List Settings to check)
+- Check required fields have values
+- Verify user has permission to create list items
+
+---
+
+## Costs
+
+- **EmailJS Free Tier**: 200 emails/month
+- **Power Automate**: Free with Microsoft 365
+- **Azure Static Web Apps**: Free tier available
+- **Total**: $0/month for low-medium usage
 
 ---
 

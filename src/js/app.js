@@ -1,15 +1,23 @@
 // Main Application JavaScript
-// Handles form logic, validation, file uploads, and API submission
-// Communicates with map widget iframe via postMessage
+// Handles form logic, validation, file uploads, and EmailJS submission
+// Sends structured data via email for Power Automate to parse
 
 (function() {
     'use strict';
 
     // ============================================================
+    // EMAILJS CONFIGURATION
+    // ============================================================
+    // Get these from your EmailJS dashboard: https://www.emailjs.com/
+    const EMAILJS_CONFIG = {
+        publicKey: 'YOUR_PUBLIC_KEY',      // Account → API Keys → Public Key
+        serviceId: 'YOUR_SERVICE_ID',       // Email Services → Service ID
+        templateId: 'YOUR_TEMPLATE_ID'      // Email Templates → Template ID
+    };
+
+    // ============================================================
     // COMPANY AND SITE CONFIGURATION
     // ============================================================
-    // Site keys must match the SITES config in map-widget.html
-    
     const COMPANY_CONFIG = {
         'BMA': {
             name: 'BMA',
@@ -95,7 +103,6 @@
     let currentKmlData = '';
     let uploadedFiles = [];
     let isSubmitting = false;
-    let mapWidgetReady = false;
 
     // ============================================================
     // IFRAME COMMUNICATION
@@ -116,24 +123,18 @@
             try {
                 const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
                 
-                // Handle KML data from widget
                 if (data.type === 'kmlData') {
                     currentKmlData = data.kml || '';
                     document.getElementById('kmlData').value = currentKmlData;
                 }
                 
-                // Handle widget ready notification
                 if (data.type === 'widgetReady') {
-                    mapWidgetReady = true;
-                    // If a site is already selected, send it to the widget
                     const siteSelect = document.getElementById('siteSelection');
                     if (siteSelect && siteSelect.value) {
                         sendToMapWidget('changeSite', { site: siteSelect.value });
                     }
                 }
-            } catch (err) {
-                // Ignore parse errors
-            }
+            } catch (err) {}
         });
     }
 
@@ -141,6 +142,11 @@
     // INITIALIZATION
     // ============================================================
     function init() {
+        // Initialize EmailJS
+        if (EMAILJS_CONFIG.publicKey !== 'YOUR_PUBLIC_KEY') {
+            emailjs.init(EMAILJS_CONFIG.publicKey);
+        }
+
         // Get company from URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         const companyKey = urlParams.get('company');
@@ -154,10 +160,7 @@
         document.getElementById('companyId').value = companyKey;
         document.getElementById('companyBadge').textContent = currentCompany.displayName;
         
-        // Populate sites dropdown
         populateSites();
-        
-        // Setup event listeners
         setupEventListeners();
         setupMapWidgetListener();
         setDefaultDate();
@@ -203,33 +206,24 @@
     // EVENT LISTENERS
     // ============================================================
     function setupEventListeners() {
-        // Site selection change - updates areas and map widget
         document.getElementById('siteSelection').addEventListener('change', handleSiteChange);
 
-        // Custom parameters toggle
         document.getElementById('customParams').addEventListener('change', (e) => {
             document.getElementById('paramsSection').style.display = e.target.checked ? 'grid' : 'none';
         });
 
-        // Frequency type toggle
         document.querySelectorAll('input[name="frequencyType"]').forEach(radio => {
             radio.addEventListener('change', handleFrequencyChange);
         });
 
-        // File upload
         setupFileUpload();
-
-        // Form submission
         document.getElementById('missionForm').addEventListener('submit', handleSubmit);
     }
 
     function handleSiteChange(e) {
         const siteKey = e.target.value;
-        
-        // Update site areas dropdown
         populateSiteAreas(siteKey);
         
-        // Send site change to map widget
         if (siteKey) {
             currentSite = currentCompany.sites[siteKey];
             sendToMapWidget('changeSite', { site: siteKey });
@@ -251,11 +245,8 @@
 
     function setDefaultDate() {
         const today = new Date();
-        // Set to tomorrow by default for planning purposes
         today.setDate(today.getDate() + 1);
         document.getElementById('missionDate').value = today.toISOString().split('T')[0];
-        
-        // Set minimum date to today
         document.getElementById('missionDate').min = new Date().toISOString().split('T')[0];
     }
 
@@ -266,10 +257,8 @@
         const uploadArea = document.getElementById('fileUploadArea');
         const fileInput = document.getElementById('fileInput');
 
-        // Click to browse
         uploadArea.addEventListener('click', () => fileInput.click());
 
-        // Drag and drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('drag-over');
@@ -285,7 +274,6 @@
             handleFiles(e.dataTransfer.files);
         });
 
-        // File input change
         fileInput.addEventListener('change', (e) => {
             handleFiles(e.target.files);
         });
@@ -293,17 +281,11 @@
 
     function handleFiles(files) {
         Array.from(files).forEach(file => {
-            // Check for duplicates
-            if (uploadedFiles.some(f => f.name === file.name)) {
-                return;
-            }
-
-            // Check file size (max 25MB)
+            if (uploadedFiles.some(f => f.name === file.name)) return;
             if (file.size > 25 * 1024 * 1024) {
                 alert(`File "${file.name}" is too large. Maximum size is 25MB.`);
                 return;
             }
-
             uploadedFiles.push(file);
             renderFileList();
         });
@@ -334,7 +316,6 @@
             fileList.appendChild(item);
         });
 
-        // Add remove handlers
         document.querySelectorAll('.file-item-remove').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = parseInt(e.currentTarget.dataset.index);
@@ -366,9 +347,14 @@
 
         if (isSubmitting) return;
         
-        // Validate site selection
         if (!document.getElementById('siteSelection').value) {
             alert('Please select a site.');
+            return;
+        }
+
+        // Check EmailJS configuration
+        if (EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY') {
+            alert('EmailJS is not configured. Please update EMAILJS_CONFIG in app.js');
             return;
         }
 
@@ -384,10 +370,9 @@
 
         try {
             const formData = collectFormData();
-            const result = await submitToApi(formData);
+            const refId = await sendViaEmailJS(formData);
 
-            // Show success modal
-            document.getElementById('missionId').textContent = result.id || 'N/A';
+            document.getElementById('missionId').textContent = refId;
             document.getElementById('successModal').style.display = 'flex';
 
         } catch (error) {
@@ -409,99 +394,107 @@
         const dateFormatted = formatDateYYMMDD(form.missionDate.value);
         const siteName = currentSite ? currentSite.name : form.siteSelection.value;
 
-        const data = {
-            // Company & Site
-            company: currentCompany.name,
-            companyDisplayName: currentCompany.displayName,
-            site: siteName,
-            siteKey: form.siteSelection.value,
-            siteArea: form.siteArea.value,
-            
-            // Mission Details
-            missionName: form.missionName.value,
-            missionType: form.missionType.value,
-            customerComment: form.customerComment.value,
-            
-            // Custom Parameters
-            customParams: form.customParams.checked,
-            imageResolution: form.customParams.checked && form.imageResolution.value ? parseFloat(form.imageResolution.value) : null,
-            missionHeight: form.customParams.checked && form.missionHeight.value ? parseFloat(form.missionHeight.value) : null,
-            overlapForward: form.customParams.checked && form.overlapForward.value ? parseFloat(form.overlapForward.value) : null,
-            overlapSide: form.customParams.checked && form.overlapSide.value ? parseFloat(form.overlapSide.value) : null,
-            terrainFollowing: form.customParams.checked ? form.terrainFollowing.value : null,
-            elevationOptimisation: form.customParams.checked ? form.elevationOptimisation.value : null,
-            
-            // Frequency
-            frequencyType: frequencyType,
-            repeatFrequency: isRepeating ? form.repeatFrequency.value : null,
-            
-            // Schedule
-            missionDate: form.missionDate.value,
-            missionPriority: parseInt(form.missionPriority.value),
-            
-            // Contact
-            submitterName: form.submitterName.value,
-            submitterEmail: form.submitterEmail.value,
-            contactNumber: form.contactNumber.value,
-            
-            // KML Data (from map widget via postMessage)
-            kmlData: currentKmlData,
-            
-            // Generated title
-            title: `${dateFormatted} ${currentCompany.name} ${siteName} ${form.siteArea.value} ${form.missionName.value}`.trim(),
-            
-            // Files
-            files: uploadedFiles,
-            
-            // Metadata
-            submittedAt: new Date().toISOString()
+        // Priority mapping
+        const priorityMap = {
+            '1': '1 - Critical',
+            '2': '2 - High',
+            '3': '3 - Medium',
+            '4': '4 - Low',
+            '5': '5 - Flexible'
         };
+
+        // Frequency value
+        let frequency = 'Once';
+        if (isRepeating && form.repeatFrequency.value) {
+            frequency = form.repeatFrequency.value;
+        }
+
+        const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
+
+        // Build SharePoint-ready data object
+        const data = {
+            // === SHAREPOINT FIELDS ===
+            Title: `${dateFormatted} ${currentCompany.name} ${siteName} ${form.siteArea.value} ${form.missionName.value}`.trim(),
+            ScheduledDate: form.missionDate.value,
+            Company: currentCompany.name,
+            Site: siteName,
+            Priority: priorityMap[form.missionPriority.value] || '3 - Medium',
+            MissionType: form.missionType.value,
+            Frequency: frequency,
+            MissionPlan: 'New Request',
+            JobStatus: 'Incomplete',
+            Comments: form.missionName.value,
+            CustomerComments: form.customerComment.value || '',
+            RequestedBy: form.submitterName.value,
+            EmailContact: form.submitterEmail.value,
+            PhContact: form.contactNumber.value || '',
+            Attachment: hasAttachments ? 'Yes' : 'No',
+            CustomerParameters: form.customParams.checked ? 'Yes' : 'No',
+            
+            // Custom parameters (only if enabled)
+            Resolution: form.customParams.checked && form.imageResolution.value ? parseFloat(form.imageResolution.value) : null,
+            HeightAGL: form.customParams.checked && form.missionHeight.value ? parseFloat(form.missionHeight.value) : null,
+            SideOverlap: form.customParams.checked && form.overlapSide.value ? parseFloat(form.overlapSide.value) : null,
+            ForwardOverlap: form.customParams.checked && form.overlapForward.value ? parseFloat(form.overlapForward.value) : null,
+            TerrainFollow: form.customParams.checked ? (form.terrainFollowing.value || null) : null,
+            ElevOpt: form.customParams.checked ? (form.elevationOptimisation.value || null) : null,
+            
+            // === METADATA (for reference, not direct SP fields) ===
+            SiteArea: form.siteArea.value,
+            SiteKey: form.siteSelection.value,
+            SubmittedAt: new Date().toISOString(),
+            
+            // File names only (files can't be sent via email easily)
+            AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
+            HasKML: currentKmlData ? 'Yes' : 'No'
+        };
+
+        // Remove null values for cleaner JSON
+        Object.keys(data).forEach(key => {
+            if (data[key] === null || data[key] === undefined) {
+                delete data[key];
+            }
+        });
 
         return data;
     }
 
-    async function submitToApi(formData) {
-        // Convert files to base64
-        const filesBase64 = await Promise.all(
-            (formData.files || []).map(async file => ({
-                name: file.name,
-                type: file.type,
-                size: file.size,
-                data: await fileToBase64(file)
-            }))
-        );
+    async function sendViaEmailJS(formData) {
+        const refId = `MR-${Date.now().toString(36).toUpperCase()}`;
+        
+        // Create clean JSON for Power Automate parsing
+        const jsonData = JSON.stringify(formData, null, 2);
 
-        const payload = {
-            ...formData,
-            files: filesBase64
+        const templateParams = {
+            title: formData.Title,
+            ref_id: refId,
+            json_data: jsonData,
+            submitted_at: new Date().toLocaleString('en-AU', { timeZone: 'Australia/Perth' }),
+            
+            // Also include key fields for quick viewing in email
+            company: formData.Company,
+            site: formData.Site,
+            site_area: formData.SiteArea,
+            mission_name: formData.Comments,
+            mission_type: formData.MissionType,
+            scheduled_date: formData.ScheduledDate,
+            priority: formData.Priority,
+            requested_by: formData.RequestedBy,
+            email: formData.EmailContact,
+            phone: formData.PhContact || 'Not provided'
         };
 
-        const response = await fetch('/api/SubmitMission', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
+        const response = await emailjs.send(
+            EMAILJS_CONFIG.serviceId,
+            EMAILJS_CONFIG.templateId,
+            templateParams
+        );
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `Server error: ${response.status}`);
+        if (response.status !== 200) {
+            throw new Error('Failed to send email');
         }
 
-        return response.json();
-    }
-
-    function fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-                const base64 = reader.result.split(',')[1];
-                resolve(base64);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
+        return refId;
     }
 
     // Initialize when DOM is ready
