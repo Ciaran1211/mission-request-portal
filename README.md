@@ -1,13 +1,15 @@
 # Mission Request Portal
 
-A custom web application for submitting drone mission requests directly to SharePoint, replacing the JotForm + Power Automate workflow.
+A web application for submitting drone mission requests. Uses Power Automate to connect to SharePoint - no Azure AD admin access required.
 
 ## Features
 
-- **Once-off Mission Requests**: Draw mission areas on an interactive map, specify parameters, and submit
-- **Daily Flight Lists**: Select from predefined daily flights with automatic expansion and dock assignments
-- **File Attachments**: Upload KML, PDF, and image files
-- **Direct SharePoint Integration**: Creates list items and attachments directly via Microsoft Graph API
+- **Company-specific URLs**: Each company gets their own form link (e.g., `?company=BMA`)
+- **Dynamic Site Selection**: Sites and areas cascade based on company
+- **Interactive Map Widget**: Draw mission areas with polygon, rectangle, circle, line, and point tools
+- **Custom Flight Parameters**: Optionally specify resolution, height, overlap, terrain following
+- **File Attachments**: Upload KML, PDF, images, and shapefiles
+- **Power Automate Integration**: Connects to SharePoint via webhook (no admin permissions needed)
 
 ---
 
@@ -17,10 +19,10 @@ A custom web application for submitting drone mission requests directly to Share
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Azure Static Web Apps                        │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │              Frontend (HTML/CSS/JS)                      │    │
-│  │  • src/index.html                                        │    │
-│  │  • src/css/styles.css                                    │    │
-│  │  • src/js/app.js, map-widget.js                         │    │
+│  │              Frontend                                    │    │
+│  │  • src/index.html (form)                                │    │
+│  │  • src/map-widget.html (embedded map iframe)            │    │
+│  │  • src/js/app.js                                        │    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                              │                                   │
 │                              ▼                                   │
@@ -32,173 +34,226 @@ A custom web application for submitting drone mission requests directly to Share
                                │
                                ▼
                     ┌─────────────────┐
+                    │  Power Automate │
+                    │  Webhook Flow   │
+                    └─────────────────┘
+                               │
+                               ▼
+                    ┌─────────────────┐
                     │   SharePoint    │
-                    │   List          │
+                    │      List       │
                     └─────────────────┘
 ```
 
 ---
 
-## Deployment Guide
+## Setup Guide
 
-### Prerequisites
+### Step 1: Create Power Automate Flow
 
-1. **Azure Subscription** (free tier works)
-2. **Azure AD access** (to register an app)
-3. **SharePoint site** with a list created
-4. **GitHub account** (for deployment)
+1. Go to [make.powerautomate.com](https://make.powerautomate.com)
 
----
+2. Click **Create** → **Instant cloud flow**
 
-### Step 1: Azure AD App Registration
+3. Name: `Mission Request Webhook`
 
-1. Go to **Azure Portal** → **Azure Active Directory** → **App registrations**
+4. Trigger: **When an HTTP request is received**
 
-2. Click **New registration**
-   - Name: `Mission Request Portal`
-   - Supported account types: `Accounts in this organizational directory only`
-   - Click **Register**
+5. Click **Create**
 
-3. Note down:
-   - **Application (client) ID**: `_______________________`
-   - **Directory (tenant) ID**: `_______________________`
+6. In the HTTP trigger, click **Use sample payload to generate schema** and paste:
 
-4. Go to **Certificates & secrets** → **New client secret**
-   - Description: `Mission Request Secret`
-   - Expires: `24 months`
-   - Click **Add**
-   - **Copy the Value immediately!**: `_______________________`
+```json
+{
+    "Title": "250104 BMA Saraji 6W Test Mission",
+    "Scheduled Date": "2025-01-04",
+    "Company": "BMA",
+    "Site": "Saraji",
+    "Priority": "3 - Medium",
+    "Mission Type": "Survey - Nadir (standard mapping survey)",
+    "Frequency": "Once",
+    "Mission Plan": "New Request",
+    "Job Status": "Incomplete",
+    "Comments": "Test Mission",
+    "Customer Comments": "Please survey the northern section",
+    "Requested by": "John Smith",
+    "Email contact": "john.smith@example.com",
+    "Ph. Contact": "+61 400 000 000",
+    "Attachment?": "No",
+    "Customer Parameters?": "Yes",
+    "Resolution": 2.5,
+    "Height (mAGL)": 100,
+    "Side Overlap (%)": 65,
+    "Forward Overlap (%)": 75,
+    "Terrain Follow?": "Yes",
+    "Elev. Opt?": "No",
+    "_siteArea": "6W",
+    "_kmlData": "",
+    "_submittedAt": "2025-01-04T10:30:00.000Z"
+}
+```
 
-5. Go to **API permissions** → **Add a permission**
-   - Select **Microsoft Graph**
-   - Select **Application permissions**
-   - Search and check:
-     - `Sites.ReadWrite.All`
-   - Click **Add permissions**
-   - Click **Grant admin consent for [Your Org]**
+7. Click **+ New step** → Search **SharePoint** → **Create item**
 
----
+8. Configure SharePoint action:
+   - **Site Address**: Select your SharePoint site
+   - **List Name**: Select your list
+   - Map the fields from Dynamic content:
 
-### Step 2: Create SharePoint List
+| SharePoint Field | Dynamic Content |
+|-----------------|-----------------|
+| Title | `Title` |
+| Scheduled Date | `Scheduled Date` |
+| Company | `Company` |
+| Site | `Site` |
+| __Priority | `Priority` |
+| Mission Type | `Mission Type` |
+| Frequency | `Frequency` |
+| Mission Plan | `Mission Plan` |
+| Job Status | `Job Status` |
+| Comments | `Comments` |
+| Customer Comments | `Customer Comments` |
+| Requested by | `Requested by` |
+| Email contact | `Email contact` |
+| Ph. Contact | `Ph. Contact` |
+| Attachment? | `Attachment?` |
+| Customer Parameters? | `Customer Parameters?` |
+| Resolution | `Resolution` |
+| Height (mAGL) | `Height (mAGL)` |
+| Side Overlap (%) | `Side Overlap (%)` |
+| Forward Overlap (%) | `Forward Overlap (%)` |
+| Terrain Follow? | `Terrain Follow?` |
+| Elev. Opt? | `Elev. Opt?` |
 
-Ensure your SharePoint list has these columns:
+9. **Save** the flow
 
-| Column Name | Type | Required |
-|-------------|------|----------|
-| Title | Single line of text | Yes |
-| SiteSelection | Single line of text | |
-| RequestType | Single line of text | |
-| WhereOnsite | Single line of text | |
-| Site | Single line of text | |
-| MissionName | Single line of text | |
-| MissionType | Single line of text | |
-| TaskName | Single line of text | |
-| CustomerComment | Multiple lines of text | |
-| MissionDate | Date only | |
-| MissionPriority | Number | |
-| HowOften | Single line of text | |
-| SubmitterName | Single line of text | |
-| SubmitterEmail | Single line of text | |
-| ContactNumber | Single line of text | |
-| SiteOrder | Number | |
-| Dock | Single line of text | |
-| PlannedFlightTime | Number | |
-| ImageResolution | Number | |
-| MissionHeight | Number | |
-| ImageOverlapForward | Number | |
-| ImageOverlapSide | Number | |
-| TerrainFollowing | Single line of text | |
-| ElevationOptimisation | Single line of text | |
-
----
-
-### Step 3: Push to GitHub
-
-1. Create a new GitHub repository
-
-2. Push this code:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/mission-request-portal.git
-   git push -u origin main
-   ```
+10. Go back to the HTTP trigger and copy the **HTTP POST URL**
 
 ---
 
-### Step 4: Deploy to Azure Static Web Apps
+### Step 2: Deploy to Azure Static Web Apps
 
-1. Go to **Azure Portal** → **Create a resource** → **Static Web App**
+1. Push this code to a GitHub repository
 
-2. Fill in:
-   - **Subscription**: Your subscription
-   - **Resource Group**: Create new or use existing
+2. In Azure Portal → **Create a resource** → **Static Web App**
+
+3. Configure:
    - **Name**: `mission-request-portal`
    - **Plan type**: `Free`
-   - **Region**: Choose closest to you
    - **Source**: `GitHub`
-   - **Organization**: Your GitHub username
-   - **Repository**: `mission-request-portal`
+   - **Repository**: Your repo
    - **Branch**: `main`
-
-3. Build Details:
    - **Build Preset**: `Custom`
    - **App location**: `/src`
    - **Api location**: `/api`
-   - **Output location**: `` (leave empty)
+   - **Output location**: (leave empty)
 
-4. Click **Review + create** → **Create**
-
-5. Wait for deployment (GitHub Action will run automatically)
+4. Click **Create**
 
 ---
 
-### Step 5: Configure Environment Variables
+### Step 3: Configure Environment Variables
 
-1. In Azure Portal, go to your Static Web App
+1. In Azure Portal → Your Static Web App → **Configuration**
 
-2. Go to **Configuration** → **Application settings**
+2. Add Application Setting:
+   - **Name**: `POWER_AUTOMATE_WEBHOOK_URL`
+   - **Value**: (paste your Power Automate HTTP POST URL)
 
-3. Add these settings:
-
-   | Name | Value |
-   |------|-------|
-   | `TENANT_ID` | Your Azure AD tenant ID |
-   | `CLIENT_ID` | Your app registration client ID |
-   | `CLIENT_SECRET` | Your app registration secret |
-   | `SHAREPOINT_SITE_URL` | `https://yourtenant.sharepoint.com/sites/yoursite` |
-   | `SHAREPOINT_LIST_NAME` | `Mission Requests` (or your list name) |
-
-4. Click **Save**
+3. Click **Save**
 
 ---
 
-### Step 6: Test the Application
+### Step 4: Test
 
-1. Go to your Static Web App URL (shown in Overview)
+Access your form with a company parameter:
 
-2. Fill out the form and submit
+```
+https://your-app.azurestaticapps.net/?company=BMA
+https://your-app.azurestaticapps.net/?company=Goldfields
+https://your-app.azurestaticapps.net/?company=RioTinto
+https://your-app.azurestaticapps.net/?company=FMG
+https://your-app.azurestaticapps.net/?company=Norton
+```
 
-3. Check your SharePoint list for the new item
+---
+
+## SharePoint List Fields
+
+Your SharePoint list should have these columns:
+
+| Column | Type | Notes |
+|--------|------|-------|
+| Title | Single line of text | Auto-generated: "YYMMDD Company Site Area MissionName" |
+| Scheduled Date | Date and Time | |
+| Company | Choice | BMA, Goldfields, RioTinto, FMG, Norton |
+| Site | Choice | Site options per company |
+| __Priority | Choice | 1 - Critical, 2 - High, 3 - Medium, 4 - Low, 5 - Flexible |
+| Mission Type | Choice | Survey - Nadir, Survey - Oblique, Inspection, Panorama, etc. |
+| Frequency | Choice | Once, Daily, Weekly, Fortnightly, Monthly, Quarterly |
+| Mission Plan | Choice | Default: "New Request" |
+| Job Status | Choice | Default: "Incomplete" |
+| Planned Flight Time (min) | Number | For repeat missions |
+| Comments | Single line of text | Mission name |
+| Attachment? | Yes/No | |
+| Customer Comments | Multiple lines of text | Description/notes |
+| Customer Parameters? | Choice | Yes/No |
+| Requested by | Single line of text | |
+| Email contact | Hyperlink or Picture | |
+| Resolution | Number | cm/px |
+| Height (mAGL) | Number | meters above ground |
+| Side Overlap (%) | Number | |
+| Forward Overlap (%) | Number | |
+| Terrain Follow? | Choice | Yes/No |
+| Elev. Opt? | Choice | Yes/No |
+| Ph. Contact | Single line of text | Phone number |
+| Site Order | Number | For repeat missions |
+| Dock | Choice | For specific sites |
+
+---
+
+## Adding New Companies/Sites
+
+### 1. Edit `src/js/app.js`
+
+Add to `COMPANY_CONFIG`:
+
+```javascript
+'NewCompany': {
+    name: 'NewCompany',
+    displayName: 'New Company Display Name',
+    sites: {
+        'site-key': {
+            name: 'Site Name',
+            areas: ['Area 1', 'Area 2', 'Area 3']
+        }
+    }
+}
+```
+
+### 2. Edit `src/map-widget.html`
+
+Add to `SITES` object (around line 352):
+
+```javascript
+'site-key': {
+    name: 'Site Name',
+    company: 'NewCompany',
+    tileUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    center: [longitude, latitude],
+    defaultZoom: 14
+}
+```
+
+For custom orthomosaic tiles, use your tile server URL instead.
 
 ---
 
 ## Local Development
 
-### Prerequisites
-
-- Node.js 18+
-- Azure Functions Core Tools v4
-- Azure CLI (optional)
-
-### Setup
-
-1. Install API dependencies:
+1. Install Azure Static Web Apps CLI:
    ```bash
-   cd api
-   npm install
+   npm install -g @azure/static-web-apps-cli
    ```
 
 2. Create `api/local.settings.json`:
@@ -207,111 +262,53 @@ Ensure your SharePoint list has these columns:
      "IsEncrypted": false,
      "Values": {
        "FUNCTIONS_WORKER_RUNTIME": "node",
-       "AzureWebJobsStorage": "",
-       "TENANT_ID": "your-tenant-id",
-       "CLIENT_ID": "your-client-id",
-       "CLIENT_SECRET": "your-client-secret",
-       "SHAREPOINT_SITE_URL": "https://yourtenant.sharepoint.com/sites/yoursite",
-       "SHAREPOINT_LIST_NAME": "Mission Requests"
+       "POWER_AUTOMATE_WEBHOOK_URL": "your-webhook-url"
      }
    }
    ```
 
-3. Start the Azure Functions locally:
+3. Run locally:
    ```bash
-   cd api
-   func start
-   ```
-
-4. Serve the frontend (use any static server):
-   ```bash
-   cd src
-   npx serve .
-   ```
-
-5. Or use the Static Web Apps CLI:
-   ```bash
-   npm install -g @azure/static-web-apps-cli
    swa start src --api-location api
    ```
 
 ---
 
-## Customization
+## Handling Attachments
 
-### Adding New Sites
+The form collects files and KML data, but they're sent as base64 in `_files` and `_kmlData` fields. To handle attachments in Power Automate:
 
-Edit `src/js/map-widget.js`:
+### Option A: Store KML in Customer Comments
+Add a Compose action to append KML data to comments.
 
-```javascript
-const SITES = {
-    'Saraji': {
-        name: 'Saraji',
-        center: [148.2875, -22.40],  // [longitude, latitude]
-        defaultZoom: 14,
-        tileUrl: 'https://your-tile-server/tiles/{z}/{x}/{y}'
-    },
-    // Add more sites here
-};
-```
+### Option B: Save to SharePoint Document Library
+Add a "Create file" action to save attachments to a document library.
 
-### Adding New Flight Tasks
-
-Edit `src/js/app.js`:
-
-```javascript
-const FLIGHT_CONFIG = {
-    'New Task': {
-        missionType: 'Survey - Nadir',
-        plannedFlightTime: 30,
-        dock: 'Dock Name'
-    },
-    // Add more tasks here
-};
-```
-
-Also update the HTML in `src/index.html` to add checkboxes for new tasks.
-
-### Modifying SharePoint Field Mapping
-
-Edit `api/SubmitMission/index.js` → `mapToSharePointFields()` function.
+### Option C: Send via Email
+Add a "Send email" action with attachments for review.
 
 ---
 
 ## Troubleshooting
 
-### "Failed to get site" Error
+### "Server configuration error"
+- Check that `POWER_AUTOMATE_WEBHOOK_URL` is set in Azure Static Web App Configuration
 
-- Verify `SHAREPOINT_SITE_URL` is correct (no trailing slash)
-- Ensure the app has `Sites.ReadWrite.All` permission
-- Ensure admin consent was granted
+### "Failed to submit to Power Automate"
+- Verify the webhook URL is correct
+- Check Power Automate flow run history for errors
+- Ensure the flow is turned on
 
-### "List not found" Error
+### Map not loading
+- Check browser console for errors
+- Verify the site key exists in both `app.js` and `map-widget.html`
 
-- Check `SHAREPOINT_LIST_NAME` matches exactly (case-sensitive)
-- Verify the list exists on the specified site
-
-### CORS Errors
-
-- The API includes CORS headers for all origins
-- If still having issues, check browser console for specific errors
-
-### File Upload Issues
-
-- Maximum file size is ~100MB (Azure Functions limit)
-- Ensure file types are allowed in the HTML input
-
----
-
-## Security Considerations
-
-1. **Client Secret**: Store only in Azure App Settings, never in code
-2. **API Permissions**: `Sites.ReadWrite.All` is broad - consider using `Sites.Selected` for production
-3. **CORS**: Restrict to specific domains in production
-4. **Rate Limiting**: Consider implementing rate limiting for the API
+### Invalid Company page shown
+- Add `?company=CompanyName` to the URL
+- Ensure company key exists in `COMPANY_CONFIG`
 
 ---
 
 ## License
 
-MIT License - Feel free to modify and use as needed.
+MIT License

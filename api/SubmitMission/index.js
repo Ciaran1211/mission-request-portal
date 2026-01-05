@@ -1,128 +1,6 @@
-const { ConfidentialClientApplication } = require('@azure/msal-node');
+// Mission Request Submission via Power Automate Webhook
+// This function forwards form data to Power Automate which handles SharePoint integration
 
-// SharePoint configuration - set these in Azure Function App Settings
-const config = {
-    tenantId: process.env.TENANT_ID,
-    clientId: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-    siteUrl: process.env.SHAREPOINT_SITE_URL, // e.g., 'https://yourtenant.sharepoint.com/sites/yoursite'
-    listName: process.env.SHAREPOINT_LIST_NAME // e.g., 'Mission Requests'
-};
-
-// MSAL configuration
-const msalConfig = {
-    auth: {
-        clientId: config.clientId,
-        authority: `https://login.microsoftonline.com/${config.tenantId}`,
-        clientSecret: config.clientSecret
-    }
-};
-
-const cca = new ConfidentialClientApplication(msalConfig);
-
-// Get access token for SharePoint
-async function getAccessToken() {
-    const result = await cca.acquireTokenByClientCredential({
-        scopes: [`${config.siteUrl}/.default`]
-    });
-    return result.accessToken;
-}
-
-// Get site and list IDs
-async function getSiteAndListIds(accessToken) {
-    // Extract site path from URL
-    const url = new URL(config.siteUrl);
-    const sitePath = url.pathname;
-
-    // Get site ID
-    const siteResponse = await fetch(
-        `https://graph.microsoft.com/v1.0/sites/${url.hostname}:${sitePath}`,
-        {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        }
-    );
-    
-    if (!siteResponse.ok) {
-        throw new Error(`Failed to get site: ${await siteResponse.text()}`);
-    }
-    
-    const site = await siteResponse.json();
-
-    // Get list ID
-    const listResponse = await fetch(
-        `https://graph.microsoft.com/v1.0/sites/${site.id}/lists?$filter=displayName eq '${config.listName}'`,
-        {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        }
-    );
-    
-    if (!listResponse.ok) {
-        throw new Error(`Failed to get list: ${await listResponse.text()}`);
-    }
-    
-    const lists = await listResponse.json();
-    
-    if (!lists.value || lists.value.length === 0) {
-        throw new Error(`List '${config.listName}' not found`);
-    }
-
-    return {
-        siteId: site.id,
-        listId: lists.value[0].id
-    };
-}
-
-// Create SharePoint list item
-async function createListItem(accessToken, siteId, listId, itemData) {
-    const response = await fetch(
-        `https://graph.microsoft.com/v1.0/sites/${siteId}/lists/${listId}/items`,
-        {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                fields: itemData
-            })
-        }
-    );
-
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Failed to create list item: ${error}`);
-    }
-
-    return response.json();
-}
-
-// Add attachment to list item
-async function addAttachment(accessToken, siteId, listId, itemId, fileName, fileContent) {
-    // Decode base64 content
-    const buffer = Buffer.from(fileContent, 'base64');
-
-    const response = await fetch(
-        `https://graph.microsoft.com/v1.0/sites/${siteId}/lists/${listId}/items/${itemId}/attachments`,
-        {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: fileName,
-                contentBytes: fileContent
-            })
-        }
-    );
-
-    if (!response.ok) {
-        console.error(`Failed to add attachment: ${await response.text()}`);
-        // Don't throw - attachments are not critical
-    }
-}
-
-// Main function handler
 module.exports = async function (context, req) {
     context.log('Mission Request submission received');
 
@@ -140,6 +18,19 @@ module.exports = async function (context, req) {
         return;
     }
 
+    // Power Automate webhook URL - set this in Azure Static Web App Configuration
+    const WEBHOOK_URL = process.env.POWER_AUTOMATE_WEBHOOK_URL;
+
+    if (!WEBHOOK_URL) {
+        context.log.error('POWER_AUTOMATE_WEBHOOK_URL not configured');
+        context.res = {
+            status: 500,
+            headers,
+            body: { success: false, message: 'Server configuration error' }
+        };
+        return;
+    }
+
     try {
         const data = req.body;
 
@@ -152,54 +43,26 @@ module.exports = async function (context, req) {
             return;
         }
 
-        // Get access token
-        const accessToken = await getAccessToken();
-        
-        // Get site and list IDs
-        const { siteId, listId } = await getSiteAndListIds(accessToken);
+        // Map form data to SharePoint fields
+        const sharePointData = mapToSharePointFields(data);
 
-        let createdIds = [];
+        context.log('Sending to Power Automate:', JSON.stringify(sharePointData, null, 2));
 
-        if (data.requestType === 'Repeated Task List') {
-            // Daily flight list - create multiple items
-            for (const mission of data.missions) {
-                const itemData = mapToSharePointFields(mission);
-                const result = await createListItem(accessToken, siteId, listId, itemData);
-                createdIds.push(result.id);
+        // Send to Power Automate
+        const response = await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sharePointData)
+        });
 
-                // Add attachments to first item only
-                if (createdIds.length === 1 && data.files && data.files.length > 0) {
-                    for (const file of data.files) {
-                        await addAttachment(accessToken, siteId, listId, result.id, file.name, file.data);
-                    }
-                }
-            }
-        } else {
-            // Once-off request - create single item
-            const itemData = mapToSharePointFields(data);
-            const result = await createListItem(accessToken, siteId, listId, itemData);
-            createdIds.push(result.id);
-
-            // Add KML as attachment if present
-            if (data.kmlData) {
-                const kmlBase64 = Buffer.from(data.kmlData).toString('base64');
-                await addAttachment(
-                    accessToken, 
-                    siteId, 
-                    listId, 
-                    result.id, 
-                    `Mission_${result.id}.kml`, 
-                    kmlBase64
-                );
-            }
-
-            // Add uploaded files as attachments
-            if (data.files && data.files.length > 0) {
-                for (const file of data.files) {
-                    await addAttachment(accessToken, siteId, listId, result.id, file.name, file.data);
-                }
-            }
+        if (!response.ok) {
+            const errorText = await response.text();
+            context.log.error('Power Automate error:', errorText);
+            throw new Error('Failed to submit to Power Automate');
         }
+
+        // Generate a reference ID for the user
+        const refId = `MR-${Date.now().toString(36).toUpperCase()}`;
 
         context.res = {
             status: 200,
@@ -207,8 +70,7 @@ module.exports = async function (context, req) {
             body: {
                 success: true,
                 message: 'Mission request submitted successfully',
-                id: createdIds[0],
-                count: createdIds.length
+                id: refId
             }
         };
 
@@ -219,53 +81,103 @@ module.exports = async function (context, req) {
             headers,
             body: {
                 success: false,
-                message: error.message || 'An error occurred'
+                message: error.message || 'An error occurred while submitting the request'
             }
         };
     }
 };
 
-// Map form data to SharePoint column names
+/**
+ * Map form data to SharePoint list field names
+ * These names should match your Power Automate flow's expected input
+ */
 function mapToSharePointFields(data) {
-    // Adjust these field names to match your SharePoint list columns
-    // The internal names might differ from display names
-    const fields = {
-        Title: data.title || 'Mission Request',
-        field_2: data.site,
-        field_5: data.missionType,
-        field_11: data.customerComment,
-        field_0: data.missionDate,
-        field_3: data.missionPriority,
-        field_6: data.howOften,
-        Requestedby: data.submitterName,
-        Emailcontact: data.submitterEmail,
-        Ph_x002e_Contact: data.contactNumber,
-        Site_x0020_Order: data.siteOrder,
-        field_1: data.company,
-        field_7: 'New Request',
-        field_8: 'Incomplete'
+    // Priority mapping (form sends number, SharePoint expects choice text)
+    const priorityMap = {
+        1: '1 - Critical',
+        2: '2 - High',
+        3: '3 - Medium',
+        4: '4 - Low',
+        5: '5 - Flexible'
     };
 
-    // Add optional fields if present
-    if (data.dock) fields.Dock = data.dock;
-    
-    // Custom parameters
-    if (data.customParams) {
-        fields.CustomerParameters_x003f_ = data.customParams
-        if (data.imageResolution) fields.Resolution = data.imageResolution;
-        if (data.missionHeight) fields.Height_x0028_mAGL_x0029_ = data.missionHeight;
-        if (data.overlapForward) fields.ForwardOverlap_x0028__x0025__x00 = data.overlapForward;
-        if (data.overlapSide) fields.SideOverlap_x0028__x0025__x0029_ = data.overlapSide;
-        if (data.terrainFollowing) fields.TerrainFollow_x003f_ = data.terrainFollowing;
-        if (data.elevationOptimisation) fields.Elev_x002e_Opt_x003f_ = data.elevationOptimisation;
+    // Determine frequency value
+    let frequency = 'Once';
+    if (data.frequencyType === 'Repeating' && data.repeatFrequency) {
+        frequency = data.repeatFrequency; // Daily, Weekly, Fortnightly, Monthly, Quarterly
     }
 
-    // Remove null/undefined values
-    Object.keys(fields).forEach(key => {
-        if (fields[key] === null || fields[key] === undefined || fields[key] === '') {
-            delete fields[key];
-        }
-    });
+    // Check if has attachments
+    const hasAttachments = (data.files && data.files.length > 0) || (data.kmlData && data.kmlData.length > 0);
+
+    // Build the SharePoint fields object
+    // Using display names - Power Automate can map these to internal names
+    const fields = {
+        // Core fields
+        'Title': data.title || `${data.company} ${data.site} ${data.missionName}`,
+        'Scheduled Date': data.missionDate,
+        'Company': data.company,
+        'Site': data.site,
+        'Priority': priorityMap[data.missionPriority] || '3 - Medium',
+        'Mission Type': data.missionType,
+        'Frequency': frequency,
+        
+        // Defaults for new requests
+        'Mission Plan': 'New Request',
+        'Job Status': 'Incomplete',
+        
+        // Comments and descriptions
+        'Comments': data.missionName,
+        'Customer Comments': data.customerComment || '',
+        
+        // Contact info
+        'Requested by': data.submitterName,
+        'Email contact': data.submitterEmail,
+        'Ph. Contact': data.contactNumber || '',
+        
+        // Attachment indicator
+        'Attachment?': hasAttachments ? 'Yes' : 'No',
+        
+        // Customer parameters
+        'Customer Parameters?': data.customParams ? 'Yes' : 'No'
+    };
+
+    // Add custom flight parameters if specified
+    if (data.customParams) {
+        if (data.imageResolution) fields['Resolution'] = data.imageResolution;
+        if (data.missionHeight) fields['Height (mAGL)'] = data.missionHeight;
+        if (data.overlapSide) fields['Side Overlap (%)'] = data.overlapSide;
+        if (data.overlapForward) fields['Forward Overlap (%)'] = data.overlapForward;
+        if (data.terrainFollowing) fields['Terrain Follow?'] = data.terrainFollowing;
+        if (data.elevationOptimisation) fields['Elev. Opt?'] = data.elevationOptimisation;
+    }
+
+    // Fields typically only used for repeat missions
+    if (data.plannedFlightTime) {
+        fields['Planned Flight Time (min)'] = data.plannedFlightTime;
+    }
+    if (data.siteOrder) {
+        fields['Site Order'] = data.siteOrder;
+    }
+    if (data.dock) {
+        fields['Dock'] = data.dock;
+    }
+
+    // Additional data that might be useful in the flow
+    // (not direct SharePoint fields, but Power Automate can use them)
+    fields['_siteArea'] = data.siteArea || '';
+    fields['_kmlData'] = data.kmlData || '';
+    fields['_submittedAt'] = data.submittedAt || new Date().toISOString();
+    
+    // Include file info (Power Automate can handle attachments separately)
+    if (data.files && data.files.length > 0) {
+        fields['_files'] = data.files.map(f => ({
+            name: f.name,
+            type: f.type,
+            size: f.size,
+            data: f.data // base64
+        }));
+    }
 
     return fields;
 }
