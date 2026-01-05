@@ -285,7 +285,7 @@
 
     function setDefaultDate() {
         const today = new Date();
-        today.setDate(today.getDate() + 1);
+        today.setDate(today.getDate());
         document.getElementById('missionDate').value = today.toISOString().split('T')[0];
         document.getElementById('missionDate').min = new Date().toISOString().split('T')[0];
     }
@@ -443,6 +443,18 @@ function collectFormData() {
 
     const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
 
+    const missionTypeVal = (form.missionType.value || '').trim();
+
+        const map = {
+          'Survey - Nadir (standard mapping survey)': 'Survey',
+          'Survey - Oblique (e.g. pit wall models)': 'Survey',
+          'Panoramic (360-deg imagery)': 'Panoramic',
+          'Inspection imagery': 'Inspection',
+          'Video recording': 'Video',
+          'Video livestream': 'Livestream',
+          'Other': 'Other'
+        };
+
     // Build SharePoint-ready data object matching the schema
     const data = {
         // === SHAREPOINT FIELDS ===
@@ -450,10 +462,10 @@ function collectFormData() {
         ScheduledDate: form.missionDate.value,
         Company: currentCompany.name,
         Site: siteName,
-        'Site Order': form.siteOrder.value ? parseInt(form.siteOrder.value) : null,
+        SiteOrder: form.siteOrder.value ? parseInt(form.siteOrder.value) : null,
         Dock: form.dock.value || '',
         Priority: parseInt(form.missionPriority.value) || 3, // Integer 1-5
-        MissionType: form.missionType.value,
+        MissionType: map[missionTypeVal] || 'Other',
         Frequency: frequency,
         MissionPlan: 'New Request',
         PlannedFlightTime: form.plannedFlightTime.value ? parseFloat(form.plannedFlightTime.value) : null,
