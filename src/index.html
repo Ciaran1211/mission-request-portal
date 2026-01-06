@@ -44,10 +44,39 @@
         <main class="main-content" id="mainContent">
             <form id="missionForm" class="mission-form">
                 
-                <!-- Section 1: Site Selection -->
+                <!-- Section 1: Request Type -->
                 <section class="form-section">
                     <h2 class="section-title">
                         <span class="section-number">1</span>
+                        Request Type
+                    </h2>
+                    
+                    <div class="request-type-toggle">
+                        <input type="radio" id="newMission" name="requestType" value="New Mission" checked>
+                        <label for="newMission" class="toggle-option">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            New Mission
+                        </label>
+                        
+                        <input type="radio" id="repeatMission" name="requestType" value="Repeat Mission">
+                        <label for="repeatMission" class="toggle-option">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 2l4 4-4 4"/>
+                                <path d="M3 11v-1a4 4 0 014-4h14"/>
+                                <path d="M7 22l-4-4 4-4"/>
+                                <path d="M21 13v1a4 4 0 01-4 4H3"/>
+                            </svg>
+                            Repeat Mission
+                        </label>
+                    </div>
+                </section>
+
+                <!-- Section 2: Site Selection -->
+                <section class="form-section">
+                    <h2 class="section-title">
+                        <span class="section-number">2</span>
                         Site Selection
                     </h2>
                     
@@ -58,8 +87,9 @@
                                 <option value="">Select a site...</option>
                             </select>
                         </div>
-
-                        <div class="form-group">
+                        
+                        <!-- Site Area - Only for New Missions -->
+                        <div class="form-group" id="siteAreaGroup">
                             <label for="siteArea">Site Area *</label>
                             <select id="siteArea" name="siteArea" required>
                                 <option value="">Select site first...</option>
@@ -67,15 +97,15 @@
                         </div>
                     </div>
 
-                    <!-- Map Widget (embedded iframe) -->
-                    <div class="map-section">
+                    <!-- Map Widget - Only for New Missions -->
+                    <div class="map-section" id="mapSection">
                         <h3>Draw Mission Area</h3>
                         <p class="map-instructions">Use the drawing tools to outline your mission area on the map. Select a site first to load the correct location.</p>
-
+                        
                         <div class="map-widget-container">
-                            <iframe
-                                id="mapWidgetFrame"
-                                src="map-widget.html"
+                            <iframe 
+                                id="mapWidgetFrame" 
+                                src="map-widget.html" 
                                 frameborder="0"
                                 allowfullscreen
                             ></iframe>
@@ -83,10 +113,25 @@
                     </div>
                 </section>
 
-                <!-- Section 2: Mission Details -->
-                <section class="form-section">
+                <!-- Section 3: Repeat Missions Selection (Hidden by default) -->
+                <section class="form-section" id="repeatMissionsSection" style="display: none;">
                     <h2 class="section-title">
-                        <span class="section-number">2</span>
+                        <span class="section-number">3</span>
+                        Select Missions
+                    </h2>
+                    
+                    <p class="section-description">Select the repeat missions you want to schedule. You can add comments for each mission.</p>
+                    
+                    <div id="repeatMissionsList" class="repeat-missions-list">
+                        <!-- Populated dynamically -->
+                        <p class="no-missions-message">Select a site to see available repeat missions.</p>
+                    </div>
+                </section>
+
+                <!-- Section 3/4: Mission Details (Only for New Missions) -->
+                <section class="form-section" id="missionDetailsSection">
+                    <h2 class="section-title">
+                        <span class="section-number">3</span>
                         Mission Details
                     </h2>
                     
@@ -100,12 +145,12 @@
                             <label for="missionType">Mission Type *</label>
                             <select id="missionType" name="missionType" required>
                                 <option value="">Select type...</option>
-                                <option value="Survey - Nadir (standard mapping survey)">Survey - Nadir (standard mapping)</option>
-                                <option value="Survey - Oblique">Survey - Oblique</option>
+                                <option value="Survey">Survey - Nadir (standard mapping)</option>
+                                <option value="Survey">Survey - Oblique</option>
                                 <option value="Inspection">Inspection</option>
-                                <option value="Panorama">Panorama</option>
+                                <option value="Panoramic">Panorama</option>
                                 <option value="Stockpile">Stockpile</option>
-                                <option value="Progress Monitoring">Progress Monitoring</option>
+                                <option value="Other">Progress Monitoring</option>
                             </select>
                         </div>
                         
@@ -160,63 +205,19 @@
                     </div>
                 </section>
 
-                <!-- Section 3: Frequency -->
+                <!-- Section 4/5: Schedule -->
                 <section class="form-section">
                     <h2 class="section-title">
-                        <span class="section-number">3</span>
-                        Frequency
-                    </h2>
-                    
-                    <div class="request-type-toggle">
-                        <input type="radio" id="onceOff" name="frequencyType" value="Once-off" checked>
-                        <label for="onceOff" class="toggle-option">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <path d="M12 6v6l4 2"/>
-                            </svg>
-                            Once-off
-                        </label>
-                        
-                        <input type="radio" id="repeating" name="frequencyType" value="Repeating">
-                        <label for="repeating" class="toggle-option">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17 2l4 4-4 4"/>
-                                <path d="M3 11v-1a4 4 0 014-4h14"/>
-                                <path d="M7 22l-4-4 4-4"/>
-                                <path d="M21 13v1a4 4 0 01-4 4H3"/>
-                            </svg>
-                            Repeating
-                        </label>
-                    </div>
-                    
-                    <div class="repeating-options" id="repeatingOptions" style="display: none;">
-                        <div class="form-group">
-                            <label for="repeatFrequency">Repeat Frequency *</label>
-                            <select id="repeatFrequency" name="repeatFrequency">
-                                <option value="">Select frequency...</option>
-                                <option value="Daily">Daily</option>
-                                <option value="Weekly">Weekly</option>
-                                <option value="Fortnightly">Fortnightly</option>
-                                <option value="Monthly">Monthly</option>
-                                <option value="Quarterly">Quarterly</option>
-                            </select>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Section 4: Schedule -->
-                <section class="form-section">
-                    <h2 class="section-title">
-                        <span class="section-number">4</span>
+                        <span class="section-number" id="scheduleNumber">4</span>
                         Schedule
                     </h2>
-
+                    
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="missionDate">Scheduled Date *</label>
                             <input type="date" id="missionDate" name="missionDate" required>
                         </div>
-
+                        
                         <div class="form-group">
                             <label for="missionPriority">Mission Priority *</label>
                             <select id="missionPriority" name="missionPriority" required>
@@ -231,10 +232,10 @@
                     </div>
                 </section>
 
-                <!-- Section 5: Contact -->
+                <!-- Section 5/6: Contact -->
                 <section class="form-section">
                     <h2 class="section-title">
-                        <span class="section-number">5</span>
+                        <span class="section-number" id="contactNumber">5</span>
                         Contact Information
                     </h2>
                     
@@ -254,10 +255,10 @@
                     </div>
                 </section>
 
-                <!-- Section 6: File Upload -->
-                <section class="form-section">
+                <!-- Section 6/7: File Upload (Only for New Missions) -->
+                <section class="form-section" id="fileUploadSection">
                     <h2 class="section-title">
-                        <span class="section-number">6</span>
+                        <span class="section-number" id="attachmentsNumber">6</span>
                         Attachments
                     </h2>
                     
@@ -303,7 +304,7 @@
                 </div>
                 <h2>Mission Request Submitted!</h2>
                 <p>Your request has been successfully added to the schedule.</p>
-                <p class="mission-id">Mission ID: <span id="missionId"></span></p>
+                <p class="mission-id">Reference: <span id="missionId"></span></p>
                 <button type="button" class="modal-btn" onclick="location.reload()">Submit Another Request</button>
             </div>
         </div>

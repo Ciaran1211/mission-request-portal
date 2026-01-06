@@ -1,6 +1,6 @@
 // Main Application JavaScript
 // Handles form logic, validation, file uploads, and EmailJS submission
-// Sends structured data via email for Power Automate to parse
+// Supports both New Mission and Repeat Mission request types
 // Configuration is loaded from config.js
 
 (function() {
@@ -11,9 +11,11 @@
     // ============================================================
     let currentCompany = null;
     let currentSite = null;
+    let currentSiteKey = null;
     let currentKmlData = '';
     let uploadedFiles = [];
     let isSubmitting = false;
+    let isRepeatMission = false;
 
     // ============================================================
     // IFRAME COMMUNICATION
@@ -33,16 +35,15 @@
         window.addEventListener('message', function(e) {
             try {
                 const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-
+                
                 if (data.type === 'kmlData') {
                     currentKmlData = data.kml || '';
                     document.getElementById('kmlData').value = currentKmlData;
                 }
-
+                
                 if (data.type === 'widgetReady') {
-                    const siteSelect = document.getElementById('siteSelection');
-                    if (siteSelect && siteSelect.value) {
-                        sendToMapWidget('changeSite', { site: siteSelect.value });
+                    if (currentSiteKey) {
+                        sendToMapWidget('changeSite', { site: currentSiteKey });
                     }
                 }
             } catch (err) {}
@@ -54,7 +55,7 @@
     // ============================================================
     function init() {
         console.log('App initializing...');
-
+        
         // Check if config is loaded
         if (typeof COMPANY_CONFIG === 'undefined') {
             console.error('ERROR: COMPANY_CONFIG not found. Make sure config.js is loaded before app.js');
@@ -64,11 +65,11 @@
             console.error('ERROR: EMAILJS_CONFIG not found. Make sure config.js is loaded before app.js');
             return;
         }
-
+        
         console.log('Config loaded. Companies:', Object.keys(COMPANY_CONFIG));
 
         // Initialize EmailJS
-        if (EMAILJS_CONFIG.publicKey !== 'YOUR_PUBLIC_KEY') {
+        if (EMAILJS_CONFIG.publicKey && EMAILJS_CONFIG.publicKey !== 'YOUR_PUBLIC_KEY') {
             emailjs.init(EMAILJS_CONFIG.publicKey);
             console.log('EmailJS initialized');
         }
@@ -77,25 +78,25 @@
         const urlParams = new URLSearchParams(window.location.search);
         const companyKey = urlParams.get('company');
         console.log('Company from URL:', companyKey);
-
+        
         if (!companyKey || !COMPANY_CONFIG[companyKey]) {
             console.log('Invalid company, showing error page');
             showInvalidCompany();
             return;
         }
-
+        
         currentCompany = COMPANY_CONFIG[companyKey];
         console.log('Current company:', currentCompany.name);
         console.log('Sites:', Object.keys(currentCompany.sites));
-
+        
         document.getElementById('companyId').value = companyKey;
         document.getElementById('companyBadge').textContent = currentCompany.displayName;
-
+        
         populateSites();
         setupEventListeners();
         setupMapWidgetListener();
         setDefaultDate();
-
+        
         console.log('App initialization complete');
     }
 
@@ -107,7 +108,7 @@
     function populateSites() {
         const siteSelect = document.getElementById('siteSelection');
         siteSelect.innerHTML = '<option value="">Select a site...</option>';
-
+        
         Object.keys(currentCompany.sites).forEach(siteKey => {
             const site = currentCompany.sites[siteKey];
             const option = document.createElement('option');
@@ -120,18 +121,68 @@
     function populateSiteAreas(siteKey) {
         const areaSelect = document.getElementById('siteArea');
         areaSelect.innerHTML = '<option value="">Select area...</option>';
-
+        
         if (!siteKey || !currentCompany.sites[siteKey]) {
             areaSelect.innerHTML = '<option value="">Select site first...</option>';
             return;
         }
-
+        
         const site = currentCompany.sites[siteKey];
-        site.areas.forEach(area => {
-            const option = document.createElement('option');
-            option.value = area;
-            option.textContent = area;
-            areaSelect.appendChild(option);
+        if (site.areas && site.areas.length > 0) {
+            site.areas.forEach(area => {
+                const option = document.createElement('option');
+                option.value = area;
+                option.textContent = area;
+                areaSelect.appendChild(option);
+            });
+        }
+    }
+
+    function populateRepeatMissions(siteKey) {
+        const listContainer = document.getElementById('repeatMissionsList');
+        
+        if (!siteKey || !currentCompany.sites[siteKey]) {
+            listContainer.innerHTML = '<p class="no-missions-message">Select a site to see available repeat missions.</p>';
+            return;
+        }
+        
+        const site = currentCompany.sites[siteKey];
+        const missions = site.repeatMissions || [];
+        
+        if (missions.length === 0) {
+            listContainer.innerHTML = '<p class="no-missions-message">No repeat missions configured for this site.</p>';
+            return;
+        }
+        
+        listContainer.innerHTML = '';
+        
+        missions.forEach((mission, index) => {
+            const missionItem = document.createElement('div');
+            missionItem.className = 'repeat-mission-item';
+            missionItem.innerHTML = `
+                <div class="mission-checkbox-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" 
+                               name="repeatMissionSelect" 
+                               value="${index}" 
+                               data-sharepoint="${mission.sharepoint}"
+                               data-display="${mission.display}"
+                               data-dock="${mission.dock || ''}"
+                               data-flight-time="${mission.plannedFlightTime || ''}"
+                               data-mission-type="${mission.missionType || ''}">
+                        <span class="checkbox-custom"></span>
+                        <span class="mission-display-name">${mission.display}</span>
+                    </label>
+                    ${mission.plannedFlightTime ? `<span class="mission-time">${mission.plannedFlightTime} min</span>` : ''}
+                </div>
+                <div class="mission-comment-row">
+                    <input type="text" 
+                           class="mission-comment-input" 
+                           placeholder="Add comment (optional)"
+                           data-mission-index="${index}">
+                </div>
+            `;
+            listContainer.appendChild(missionItem);
         });
     }
 
@@ -139,48 +190,107 @@
     // EVENT LISTENERS
     // ============================================================
     function setupEventListeners() {
+        // Request type toggle
+        document.querySelectorAll('input[name="requestType"]').forEach(radio => {
+            radio.addEventListener('change', handleRequestTypeChange);
+        });
+
+        // Site selection
         document.getElementById('siteSelection').addEventListener('change', handleSiteChange);
 
+        // Custom parameters toggle
         document.getElementById('customParams').addEventListener('change', (e) => {
             document.getElementById('paramsSection').style.display = e.target.checked ? 'grid' : 'none';
         });
 
-        document.querySelectorAll('input[name="frequencyType"]').forEach(radio => {
-            radio.addEventListener('change', handleFrequencyChange);
-        });
-
+        // File upload
         setupFileUpload();
+        
+        // Form submission
         document.getElementById('missionForm').addEventListener('submit', handleSubmit);
+    }
+
+    function handleRequestTypeChange(e) {
+        isRepeatMission = e.target.value === 'Repeat Mission';
+        
+        // Toggle visibility of sections
+        const siteAreaGroup = document.getElementById('siteAreaGroup');
+        const mapSection = document.getElementById('mapSection');
+        const missionDetailsSection = document.getElementById('missionDetailsSection');
+        const repeatMissionsSection = document.getElementById('repeatMissionsSection');
+        const fileUploadSection = document.getElementById('fileUploadSection');
+        
+        if (isRepeatMission) {
+            // Show repeat missions, hide new mission sections
+            siteAreaGroup.style.display = 'none';
+            mapSection.style.display = 'none';
+            missionDetailsSection.style.display = 'none';
+            fileUploadSection.style.display = 'none';
+            repeatMissionsSection.style.display = 'block';
+            
+            // Update section numbers
+            document.getElementById('scheduleNumber').textContent = '4';
+            document.getElementById('contactNumber').textContent = '5';
+            
+            // Remove required from new mission fields
+            document.getElementById('siteArea').removeAttribute('required');
+            document.getElementById('missionName').removeAttribute('required');
+            document.getElementById('missionType').removeAttribute('required');
+            
+            // Populate repeat missions for current site
+            if (currentSiteKey) {
+                populateRepeatMissions(currentSiteKey);
+            }
+        } else {
+            // Show new mission sections, hide repeat missions
+            siteAreaGroup.style.display = 'block';
+            mapSection.style.display = 'block';
+            missionDetailsSection.style.display = 'block';
+            fileUploadSection.style.display = 'block';
+            repeatMissionsSection.style.display = 'none';
+            
+            // Update section numbers
+            document.getElementById('scheduleNumber').textContent = '4';
+            document.getElementById('contactNumber').textContent = '5';
+            document.getElementById('attachmentsNumber').textContent = '6';
+            
+            // Restore required attributes
+            document.getElementById('siteArea').setAttribute('required', '');
+            document.getElementById('missionName').setAttribute('required', '');
+            document.getElementById('missionType').setAttribute('required', '');
+        }
     }
 
     function handleSiteChange(e) {
         const siteKey = e.target.value;
-        populateSiteAreas(siteKey);
-
-        if (siteKey) {
+        currentSiteKey = siteKey;
+        
+        if (siteKey && currentCompany.sites[siteKey]) {
             currentSite = currentCompany.sites[siteKey];
+            
+            // Update areas dropdown
+            populateSiteAreas(siteKey);
+            
+            // Update map widget
             sendToMapWidget('changeSite', { site: siteKey });
-        }
-    }
-
-    function handleFrequencyChange(e) {
-        const isRepeating = e.target.value === 'Repeating';
-        const repeatingOptions = document.getElementById('repeatingOptions');
-        const repeatFrequency = document.getElementById('repeatFrequency');
-
-        repeatingOptions.style.display = isRepeating ? 'block' : 'none';
-        repeatFrequency.required = isRepeating;
-
-        if (!isRepeating) {
-            repeatFrequency.value = '';
+            
+            // Update repeat missions list if in repeat mode
+            if (isRepeatMission) {
+                populateRepeatMissions(siteKey);
+            }
+        } else {
+            currentSite = null;
+            populateSiteAreas(null);
+            if (isRepeatMission) {
+                populateRepeatMissions(null);
+            }
         }
     }
 
     function setDefaultDate() {
         const today = new Date();
-        today.setDate(today.getDate() + 1);
         document.getElementById('missionDate').value = today.toISOString().split('T')[0];
-        document.getElementById('missionDate').min = new Date().toISOString().split('T')[0];
+        document.getElementById('missionDate').min = today.toISOString().split('T')[0];
     }
 
     // ============================================================
@@ -279,15 +389,24 @@
         e.preventDefault();
 
         if (isSubmitting) return;
-
+        
         if (!document.getElementById('siteSelection').value) {
             alert('Please select a site.');
             return;
         }
 
+        // Validate repeat missions selection
+        if (isRepeatMission) {
+            const selectedMissions = document.querySelectorAll('input[name="repeatMissionSelect"]:checked');
+            if (selectedMissions.length === 0) {
+                alert('Please select at least one mission.');
+                return;
+            }
+        }
+
         // Check EmailJS configuration
-        if (EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY') {
-            alert('EmailJS is not configured. Please update EMAILJS_CONFIG in app.js');
+        if (!EMAILJS_CONFIG.publicKey || EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY') {
+            alert('EmailJS is not configured. Please update EMAILJS_CONFIG in config.js');
             return;
         }
 
@@ -302,7 +421,13 @@
         submitBtn.disabled = true;
 
         try {
-            const formData = collectFormData();
+            let formData;
+            if (isRepeatMission) {
+                formData = collectRepeatMissionData();
+            } else {
+                formData = collectNewMissionData();
+            }
+            
             const refId = await sendViaEmailJS(formData);
 
             document.getElementById('missionId').textContent = refId;
@@ -320,84 +445,103 @@
         }
     }
 
-    function collectFormData() {
+    function collectNewMissionData() {
         const form = document.getElementById('missionForm');
-        const frequencyType = document.querySelector('input[name="frequencyType"]:checked').value;
-        const isRepeating = frequencyType === 'Repeating';
         const dateFormatted = formatDateYYMMDD(form.missionDate.value);
         const siteName = currentSite ? currentSite.name : form.siteSelection.value;
 
-        // Priority mapping
-        const priorityMap = {
-            '1': '1 - Critical',
-            '2': '2 - High',
-            '3': '3 - Medium',
-            '4': '4 - Low',
-            '5': '5 - Flexible'
-        };
-
-        // Frequency value
-        let frequency = 'Once';
-        if (isRepeating && form.repeatFrequency.value) {
-            frequency = form.repeatFrequency.value;
-        }
-
         const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
 
-        // Build SharePoint-ready data object
-        // Note: Email is stored with [at] to prevent HTML auto-linking, Power Automate will fix it
         const data = {
-            // === SHAREPOINT FIELDS ===
+            RequestType: 'New Mission',
             Title: `${dateFormatted} ${currentCompany.name} ${siteName} ${form.siteArea.value} ${form.missionName.value}`.trim(),
             ScheduledDate: form.missionDate.value,
             Company: currentCompany.name,
             Site: siteName,
-            Priority: priorityMap[form.missionPriority.value] || '3 - Medium',
+            SiteKey: currentSiteKey,
+            SiteArea: form.siteArea.value,
+            Priority: parseInt(form.missionPriority.value) || 3,
             MissionType: form.missionType.value,
-            Frequency: frequency,
-            MissionPlan: 'New Request',
-            JobStatus: 'Incomplete',
-            Comments: form.missionName.value,
+            MissionName: form.missionName.value,
             CustomerComments: form.customerComment.value || '',
             RequestedBy: form.submitterName.value,
             EmailContact: form.submitterEmail.value,
             PhContact: form.contactNumber.value || '',
             Attachment: hasAttachments,
-            CustomerParameters: form.customParams.checked ? 'Yes' : 'No',
-
-            // Custom parameters (only if enabled)
-            Resolution: form.customParams.checked && form.imageResolution.value ? parseFloat(form.imageResolution.value) : null,
-            HeightAGL: form.customParams.checked && form.missionHeight.value ? parseFloat(form.missionHeight.value) : null,
-            SideOverlap: form.customParams.checked && form.overlapSide.value ? parseFloat(form.overlapSide.value) : null,
-            ForwardOverlap: form.customParams.checked && form.overlapForward.value ? parseFloat(form.overlapForward.value) : null,
-            TerrainFollow: form.customParams.checked ? (form.terrainFollowing.value || null) : null,
-            ElevOpt: form.customParams.checked ? (form.elevationOptimisation.value || null) : null,
-
-            // === METADATA (for reference, not direct SP fields) ===
-            SiteArea: form.siteArea.value,
-            SiteKey: form.siteSelection.value,
+            CustomerParameters: form.customParams.checked,
+            MissionPlan: 'New Request',
+            JobStatus: 'Incomplete',
+            Frequency: 'Once',
             SubmittedAt: new Date().toISOString(),
-
-            // File names only (files can't be sent via email easily)
             AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
-            HasKML: currentKmlData ? 'Yes' : 'No'
+            HasKML: currentKmlData ? true : false
         };
 
-        // Remove null values for cleaner JSON
-        Object.keys(data).forEach(key => {
-            if (data[key] === null || data[key] === undefined) {
-                delete data[key];
-            }
+        // Custom parameters (only if enabled)
+        if (form.customParams.checked) {
+            if (form.imageResolution.value) data.Resolution = parseFloat(form.imageResolution.value);
+            if (form.missionHeight.value) data.HeightAGL = parseInt(form.missionHeight.value);
+            if (form.overlapSide.value) data.SideOverlap = parseInt(form.overlapSide.value);
+            if (form.overlapForward.value) data.ForwardOverlap = parseInt(form.overlapForward.value);
+            if (form.terrainFollowing.value) data.TerrainFollow = form.terrainFollowing.value;
+            if (form.elevationOptimisation.value) data.ElevOpt = form.elevationOptimisation.value;
+        }
+
+        return data;
+    }
+
+    function collectRepeatMissionData() {
+        const form = document.getElementById('missionForm');
+        const siteName = currentSite ? currentSite.name : form.siteSelection.value;
+
+        // Get selected missions
+        const selectedCheckboxes = document.querySelectorAll('input[name="repeatMissionSelect"]:checked');
+        const repeatMissions = [];
+        
+        let siteOrder = 1;
+        selectedCheckboxes.forEach(checkbox => {
+            const index = checkbox.value;
+            const commentInput = document.querySelector(`.mission-comment-input[data-mission-index="${index}"]`);
+            const comment = commentInput ? commentInput.value : '';
+            
+            repeatMissions.push({
+                Title: checkbox.dataset.sharepoint,
+                MissionName: checkbox.dataset.sharepoint,
+                DisplayName: checkbox.dataset.display,
+                MissionType: checkbox.dataset.missionType || '',
+                Comment: comment,
+                SiteOrder: siteOrder++,
+                Dock: checkbox.dataset.dock || '',
+                PlannedFlightTime: checkbox.dataset.flightTime ? parseInt(checkbox.dataset.flightTime) : null,
+                MissionPlan: 'New Request',
+                JobStatus: 'Incomplete'
+            });
         });
+
+        const data = {
+            RequestType: 'Repeat Mission',
+            Title: `${formatDateYYMMDD(form.missionDate.value)} ${currentSiteKey} Repeat Missions (${repeatMissions.length})`,
+            ScheduledDate: form.missionDate.value,
+            Priority: parseInt(form.missionPriority.value) || 3,
+            Company: currentCompany.name,
+            Site: siteName,
+            SiteKey: currentSiteKey,
+            RequestedBy: form.submitterName.value,
+            EmailContact: form.submitterEmail.value,
+            PhContact: form.contactNumber.value || '',
+            Attachment: false,
+            AttachmentNames: 'None',
+            SubmittedAt: new Date().toISOString(),
+            RepeatMissions: repeatMissions
+        };
 
         return data;
     }
 
     async function sendViaEmailJS(formData) {
         const refId = `MR-${Date.now().toString(36).toUpperCase()}`;
-
+        
         // Create clean JSON for Power Automate parsing
-        // Note: EmailJS may convert to HTML, so Power Automate needs to clean it
         const jsonData = JSON.stringify(formData, null, 2);
 
         const templateParams = {
@@ -405,17 +549,18 @@
             ref_id: refId,
             json_data: jsonData,
             submitted_at: new Date().toLocaleString('en-AU', { timeZone: 'Australia/Perth' }),
-
-            // Key fields for quick viewing (plain text, no links)
+            
+            // Key fields for quick viewing
+            request_type: formData.RequestType,
             company: formData.Company,
             site: formData.Site,
-            site_area: formData.SiteArea,
-            mission_name: formData.Comments,
-            mission_type: formData.MissionType,
+            site_area: formData.SiteArea || 'N/A',
+            mission_name: formData.MissionName || (formData.RepeatMissions ? `${formData.RepeatMissions.length} missions` : ''),
+            mission_type: formData.MissionType || 'Repeat',
             scheduled_date: formData.ScheduledDate,
             priority: formData.Priority,
             requested_by: formData.RequestedBy,
-            email_contact: formData.EmailContact.replace('@', ' [at] '), // Prevent auto-linking
+            email_contact: formData.EmailContact.replace('@', ' [at] '),
             phone: formData.PhContact || 'Not provided'
         };
 

@@ -664,8 +664,121 @@ input[type="radio"]:checked + .toggle-option svg {
     .params-grid {
         grid-template-columns: 1fr;
     }
-
+    
     .error-card {
         padding: 40px 24px;
+    }
+}
+
+/* ============================================================
+   REPEAT MISSIONS STYLES
+   ============================================================ */
+
+.section-description {
+    color: var(--gray-600);
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.repeat-missions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.no-missions-message {
+    color: var(--gray-500);
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
+    background: var(--gray-100);
+    border-radius: var(--radius-md);
+}
+
+.repeat-mission-item {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    transition: all 0.2s ease;
+}
+
+.repeat-mission-item:hover {
+    border-color: var(--cyan);
+    box-shadow: var(--shadow-sm);
+}
+
+.mission-checkbox-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mission-checkbox-row .checkbox-label {
+    margin-bottom: 0;
+    flex: 1;
+}
+
+.mission-display-name {
+    font-weight: 500;
+    color: var(--navy);
+}
+
+.mission-time {
+    font-size: 12px;
+    color: var(--gray-500);
+    background: var(--gray-100);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.mission-comment-row {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--gray-100);
+}
+
+.mission-comment-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s ease;
+}
+
+.mission-comment-input:focus {
+    outline: none;
+    border-color: var(--cyan);
+}
+
+.mission-comment-input::placeholder {
+    color: var(--gray-400);
+}
+
+/* Checkbox styling for repeat missions */
+.repeat-mission-item .checkbox-label input:checked + .checkbox-custom {
+    background: var(--cyan);
+    border-color: var(--cyan);
+}
+
+.repeat-mission-item:has(input:checked) {
+    border-color: var(--cyan);
+    background: rgba(10, 186, 239, 0.03);
+}
+
+/* Responsive adjustments for repeat missions */
+@media (max-width: 640px) {
+    .mission-checkbox-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .mission-time {
+        margin-left: 34px;
     }
 }
