@@ -53,21 +53,41 @@
     // INITIALIZATION
     // ============================================================
     function init() {
+        console.log('App initializing...');
+
+        // Check if config is loaded
+        if (typeof COMPANY_CONFIG === 'undefined') {
+            console.error('ERROR: COMPANY_CONFIG not found. Make sure config.js is loaded before app.js');
+            return;
+        }
+        if (typeof EMAILJS_CONFIG === 'undefined') {
+            console.error('ERROR: EMAILJS_CONFIG not found. Make sure config.js is loaded before app.js');
+            return;
+        }
+
+        console.log('Config loaded. Companies:', Object.keys(COMPANY_CONFIG));
+
         // Initialize EmailJS
         if (EMAILJS_CONFIG.publicKey !== 'YOUR_PUBLIC_KEY') {
             emailjs.init(EMAILJS_CONFIG.publicKey);
+            console.log('EmailJS initialized');
         }
 
         // Get company from URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         const companyKey = urlParams.get('company');
+        console.log('Company from URL:', companyKey);
 
         if (!companyKey || !COMPANY_CONFIG[companyKey]) {
+            console.log('Invalid company, showing error page');
             showInvalidCompany();
             return;
         }
 
         currentCompany = COMPANY_CONFIG[companyKey];
+        console.log('Current company:', currentCompany.name);
+        console.log('Sites:', Object.keys(currentCompany.sites));
+
         document.getElementById('companyId').value = companyKey;
         document.getElementById('companyBadge').textContent = currentCompany.displayName;
 
@@ -75,6 +95,8 @@
         setupEventListeners();
         setupMapWidgetListener();
         setDefaultDate();
+
+        console.log('App initialization complete');
     }
 
     function showInvalidCompany() {

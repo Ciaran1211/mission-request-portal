@@ -149,8 +149,3 @@ const EMAILJS_CONFIG = {
     serviceId: 'service_4j8dixs',         // Email Services → Service ID
     templateId: 'template_152awpf'        // Email Templates → Template ID
 };
-
-// Export for use in app.js (if using modules) or just use globally
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { COMPANY_CONFIG, EMAILJS_CONFIG };
-}
