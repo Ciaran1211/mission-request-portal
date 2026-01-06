@@ -1,99 +1,10 @@
 // Main Application JavaScript
 // Handles form logic, validation, file uploads, and EmailJS submission
 // Sends structured data via email for Power Automate to parse
+// Configuration is loaded from config.js
 
 (function() {
     'use strict';
-
-    // ============================================================
-    // EMAILJS CONFIGURATION
-    // ============================================================
-    // Get these from your EmailJS dashboard: https://www.emailjs.com/
-    const EMAILJS_CONFIG = {
-        publicKey: 'YOUR_PUBLIC_KEY',      // Account → API Keys → Public Key
-        serviceId: 'YOUR_SERVICE_ID',       // Email Services → Service ID
-        templateId: 'YOUR_TEMPLATE_ID'      // Email Templates → Template ID
-    };
-
-    // ============================================================
-    // COMPANY AND SITE CONFIGURATION
-    // ============================================================
-    const COMPANY_CONFIG = {
-        'BMA': {
-            name: 'BMA',
-            displayName: 'BHP Mitsubishi Alliance',
-            sites: {
-                'saraji': {
-                    name: 'Saraji',
-                    areas: ['6W', '8W', '10W', '12W', 'Saraji East', 'Processing Plant', 'Stockpile Area']
-                },
-                'goonyella': {
-                    name: 'Goonyella',
-                    areas: ['North Pit', 'South Pit', 'East Pit', 'CHPP', 'Rail Loop']
-                },
-                'peak-downs': {
-                    name: 'Peak Downs',
-                    areas: ['Main Pit', 'Extension', 'Haul Road', 'Processing']
-                }
-            }
-        },
-        'Goldfields': {
-            name: 'Goldfields',
-            displayName: 'Goldfields',
-            sites: {
-                'st-ives': {
-                    name: 'St Ives',
-                    areas: ['Invincible', 'Hamlet', 'Neptune', 'Athena', 'Processing']
-                },
-                'gruyere': {
-                    name: 'Gruyere',
-                    areas: ['Open Pit', 'Stage 1', 'Stage 2', 'Processing Plant', 'TSF']
-                },
-                'agnew': {
-                    name: 'Agnew',
-                    areas: ['Kim Pit', 'Waroonga', 'Mill', 'Tailings']
-                }
-            }
-        },
-        'RioTinto': {
-            name: 'RioTinto',
-            displayName: 'Rio Tinto',
-            sites: {
-                'tom-price': {
-                    name: 'Tom Price',
-                    areas: ['North Deposit', 'South Deposit', 'Section 7', 'Processing', 'Rail']
-                },
-                'paraburdoo': {
-                    name: 'Paraburdoo',
-                    areas: ['Eastern Range', '4 East', 'Channar', 'Processing']
-                }
-            }
-        },
-        'FMG': {
-            name: 'FMG',
-            displayName: 'Fortescue Metals Group',
-            sites: {
-                'christmas-creek': {
-                    name: 'Christmas Creek',
-                    areas: ['Cloudbreak West', 'Eastern Hub', 'Central', 'Processing', 'Rail']
-                },
-                'solomon': {
-                    name: 'Solomon',
-                    areas: ['Kings Valley', 'Firetail', 'Queens Valley', 'Infrastructure']
-                }
-            }
-        },
-        'Norton': {
-            name: 'Norton',
-            displayName: 'Norton Gold Fields',
-            sites: {
-                'binduli-north': {
-                    name: 'Binduli North',
-                    areas: ['Main Pit', 'North Extension', 'ROM Pad', 'Haul Road']
-                }
-            }
-        }
-    };
 
     // ============================================================
     // STATE
