@@ -109,6 +109,7 @@ body {
     padding: 20px 0;
     margin-bottom: 15px;
     border-bottom: 1px solid rgba(10, 186, 239, 0.2);
+    overflow: visible;
 }
 
 .form-section:last-child {
@@ -144,12 +145,15 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 15px;
     margin-bottom: 10px;
+    overflow: visible;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    position: relative;
+    overflow: visible;
 }
 
 .form-group.full-width {
@@ -662,6 +666,7 @@ input[type="radio"]:checked + .toggle-option svg {
     position: relative;
     width: 100%;
     z-index: 100;
+    overflow: visible;
 }
 
 .priority-help-button {
@@ -700,9 +705,9 @@ input[type="radio"]:checked + .toggle-option svg {
     background: var(--white);
     border-radius: var(--radius-md);
     padding: 20px;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     border: 1px solid var(--gray-200);
-    z-index: 1000;
+    z-index: 9999 !important;
     margin-top: 8px;
     opacity: 0;
     visibility: hidden;
@@ -711,8 +716,8 @@ input[type="radio"]:checked + .toggle-option svg {
 }
 
 .priority-tooltip.show {
-    opacity: 1;
-    visibility: visible;
+    opacity: 1 !important;
+    visibility: visible !important;
     transform: translateY(0);
 }
 

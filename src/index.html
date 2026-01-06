@@ -128,10 +128,86 @@
 
                     <!-- Schedule for Repeat Missions -->
                     <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(10, 186, 239, 0.2);">
-                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--navy);">Schedule</h3>
-                        <div class="form-group" style="max-width: 300px;">
-                            <label for="repeatMissionDate">Required Mission Date *</label>
-                            <input type="date" id="repeatMissionDate" name="repeatMissionDate">
+                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--navy);">Schedule & Priority</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="repeatMissionDate">Required Mission Date *</label>
+                                <input type="date" id="repeatMissionDate" name="repeatMissionDate">
+                            </div>
+                            <div class="form-group">
+                                <label for="repeatMissionPriority">Mission Priority *</label>
+                                <select id="repeatMissionPriority" name="repeatMissionPriority">
+                                    <option value="">Select priority...</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3" selected>3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                </select>
+
+                                <!-- Priority Help Button & Tooltip for Repeat -->
+                                <div class="priority-help-container">
+                                    <button type="button" class="priority-help-button" id="repeatPriorityHelpButton">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <path d="M12 16v-4M12 8h.01"/>
+                                        </svg>
+                                        Show priority breakdown
+                                    </button>
+
+                                    <div class="priority-tooltip" id="repeatPriorityTooltip">
+                                        <div class="priority-guidelines">
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-1">1</span>
+                                                    <span class="priority-title">Critical - Within 30 minutes</span>
+                                                </div>
+                                                <p class="priority-description">Urgent missions required ASAP for operational reasons or time-dependent missions (e.g., blast surveys, emergency response).</p>
+                                            </div>
+
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-2">2</span>
+                                                    <span class="priority-title">High - Within 4 hours</span>
+                                                </div>
+                                                <p class="priority-description">To be completed within 4 hours. Add time requirement in comments (e.g., Daily panoramic flights, semi-urgent unscheduled jobs).</p>
+                                            </div>
+
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-3">3</span>
+                                                    <span class="priority-title">Medium - Before 13:00</span>
+                                                </div>
+                                                <p class="priority-description">Ideally complete before 13:00. For survey flights that require processing due that day.</p>
+                                            </div>
+
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-4">4</span>
+                                                    <span class="priority-title">Low - By end of day</span>
+                                                </div>
+                                                <p class="priority-description">Can be completed by end of day. Standard missions without same-day processing requirements.</p>
+                                            </div>
+
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-5">5</span>
+                                                    <span class="priority-title">Flexible - Next day</span>
+                                                </div>
+                                                <p class="priority-description">Not urgent. Can be completed the next day. For planning and non-time-sensitive missions.</p>
+                                            </div>
+
+                                            <div class="priority-tip">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <circle cx="12" cy="12" r="10"/>
+                                                    <path d="M12 16v-4M12 8h.01"/>
+                                                </svg>
+                                                <p class="priority-tip-text">When selecting Priority 2, please specify the required completion time in the mission description.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -552,47 +628,60 @@
     <!-- Priority Tooltip Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Priority tooltip functionality
-            const priorityHelpButton = document.getElementById('priorityHelpButton');
-            const priorityTooltip = document.getElementById('priorityTooltip');
+            console.log('Priority tooltip script loaded');
 
-            if (priorityHelpButton && priorityTooltip) {
+            // Setup tooltip functionality for any button/tooltip pair
+            function setupPriorityTooltip(buttonId, tooltipId) {
+                const button = document.getElementById(buttonId);
+                const tooltip = document.getElementById(tooltipId);
+
+                console.log('Setting up tooltip:', buttonId, '-> found:', !!button, ', tooltip:', tooltipId, '-> found:', !!tooltip);
+
+                if (!button || !tooltip) {
+                    console.warn('Could not find button or tooltip:', buttonId, tooltipId);
+                    return;
+                }
+
                 // Toggle tooltip on button click
-                priorityHelpButton.addEventListener('click', function(e) {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
                     e.stopPropagation();
-                    priorityTooltip.classList.toggle('show');
+                    console.log('Button clicked:', buttonId);
+
+                    // Close any other open tooltips
+                    document.querySelectorAll('.priority-tooltip.show').forEach(t => {
+                        if (t !== tooltip) t.classList.remove('show');
+                    });
+
+                    tooltip.classList.toggle('show');
+                    console.log('Tooltip visibility:', tooltip.classList.contains('show'));
                 });
+            }
 
-                // Close tooltip when clicking outside
-                document.addEventListener('click', function(e) {
-                    if (!priorityHelpButton.contains(e.target) && !priorityTooltip.contains(e.target)) {
-                        priorityTooltip.classList.remove('show');
-                    }
-                });
+            // Setup both tooltips
+            setupPriorityTooltip('priorityHelpButton', 'priorityTooltip');
+            setupPriorityTooltip('repeatPriorityHelpButton', 'repeatPriorityTooltip');
 
-                // Close tooltip on escape key
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        priorityTooltip.classList.remove('show');
-                    }
-                });
+            // Close all tooltips when clicking outside
+            document.addEventListener('click', function(e) {
+                const isInsideTooltip = e.target.closest('.priority-tooltip');
+                const isButton = e.target.closest('.priority-help-button');
 
-                // Optional: Show tooltip automatically when Priority 2 is selected
-                const missionPrioritySelect = document.getElementById('missionPriority');
-                if (missionPrioritySelect) {
-                    missionPrioritySelect.addEventListener('change', function() {
-                        if (this.value === '2' && priorityTooltip) {
-                            // Show tooltip to remind about time requirement
-                            priorityTooltip.classList.add('show');
-
-                            // Auto-hide after 8 seconds
-                            setTimeout(() => {
-                                priorityTooltip.classList.remove('show');
-                            }, 8000);
-                        }
+                if (!isInsideTooltip && !isButton) {
+                    document.querySelectorAll('.priority-tooltip.show').forEach(t => {
+                        t.classList.remove('show');
                     });
                 }
-            }
+            });
+
+            // Close all tooltips on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('.priority-tooltip.show').forEach(t => {
+                        t.classList.remove('show');
+                    });
+                }
+            });
         });
     </script>
 </body>

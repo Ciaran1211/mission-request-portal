@@ -729,6 +729,12 @@
                 throw new Error('Scheduled date cannot be in the past');
             }
 
+            // Check priority
+            const repeatPriority = document.getElementById('repeatMissionPriority');
+            if (!repeatPriority || !repeatPriority.value) {
+                throw new Error('Please select a mission priority');
+            }
+
             // Check contact info (using repeat-specific fields)
             const repeatName = document.getElementById('repeatSubmitterName');
             const repeatEmail = document.getElementById('repeatSubmitterEmail');
@@ -823,6 +829,7 @@ function collectFormData() {
 
         // Use repeat-specific field IDs
         const repeatDate = document.getElementById('repeatMissionDate');
+        const repeatPriority = document.getElementById('repeatMissionPriority');
         const repeatName = document.getElementById('repeatSubmitterName');
         const repeatEmail = document.getElementById('repeatSubmitterEmail');
         const repeatPhone = document.getElementById('repeatContactNumber');
@@ -830,6 +837,7 @@ function collectFormData() {
         const data = {
             RequestType: 'Repeat Mission',
             ScheduledDate: repeatDate ? repeatDate.value : '',
+            Priority: repeatPriority ? parseInt(repeatPriority.value) || 3 : 3,
             Company: currentCompany.name,
             Site: siteName,
             SiteKey: getFieldValue('siteSelection'),
@@ -849,10 +857,7 @@ function collectFormData() {
                 Comment: row.comment || '',              // User comment/KML reference
                 SiteOrder: index + 1,                    // Position in order (1, 2, 3...)
                 Dock: row.mission.dock || '',            // Dock location from config
-                PlannedFlightTime: row.mission.plannedFlightTime || null,  // Flight time in minutes
-                MissionPlan: 'New Request',
-                JobStatus: 'Incomplete',
-                MissionType:  row.mission.missionType
+                PlannedFlightTime: row.mission.plannedFlightTime || null  // Flight time in minutes
             })),
 
             // Summary for title
@@ -1051,8 +1056,8 @@ function validateFormData(data) {
             templateParams.site_area = 'N/A';
             templateParams.mission_name = `${formData.RepeatMissions.length} repeat mission(s)`;
             templateParams.mission_type = 'Repeat';
-            templateParams.priority = 'N/A';
-            templateParams.repeat_missions = formData.RepeatMissions.map(m => m.MissionName).join(', ');
+            templateParams.priority = formData.Priority;
+            templateParams.repeat_missions = formData.RepeatMissions.map(m => m.DisplayName).join(', ');
         } else {
             templateParams.site_area = formData.SiteArea;
             templateParams.mission_name = formData.Comments;
