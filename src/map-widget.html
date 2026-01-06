@@ -421,7 +421,11 @@
             // Send message to parent
             function sendToParent(type, data) {
                 if (inIframe) {
-                    window.parent.postMessage(JSON.stringify({ type, ...data }), '*');
+                    window.parent.postMessage(JSON.stringify({
+                        type,
+                        ...data,
+                        timestamp: new Date().toISOString()
+                    }), '*');
                 }
             }
 
@@ -505,6 +509,9 @@
                     // Send KML to parent whenever features change
                     sendKmlToParent();
                 });
+
+                // Send initial KML state
+                setTimeout(sendKmlToParent, 500);
             }
 
             // Change site dynamically
@@ -544,7 +551,14 @@
             // Send KML data to parent
             function sendKmlToParent() {
                 const kml = generateKMLString();
-                sendToParent('kmlData', { kml: kml, featureCount: State.drawSource.getFeatures().length });
+                if (inIframe) {
+                    window.parent.postMessage(JSON.stringify({
+                        type: 'kmlData',
+                        kml: kml,
+                        featureCount: State.drawSource.getFeatures().length,
+                        timestamp: new Date().toISOString()
+                    }), '*');
+                }
             }
 
             function setTool(toolType) {
@@ -560,6 +574,7 @@
                     State.featureHistory.push(e.feature);
                     setStatus('ready', 'Feature added');
                     sendToJotForm();
+                    sendKmlToParent();
                 });
                 State.map.addInteraction(State.drawInteraction);
                 setStatus('ready', `${toolType} active`);
@@ -582,6 +597,7 @@
                     State.drawSource.clear();
                     State.featureHistory = [];
                     sendToJotForm();
+                    sendKmlToParent();
                     setStatus('ready', 'Canvas cleared');
                 });
             }

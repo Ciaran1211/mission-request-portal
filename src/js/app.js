@@ -27,18 +27,18 @@
                     name: 'Saraji',
                     areas: ["6E", "6W", "4E", "4W", "2E", "2W", "1E", "1W", "13E", "15W", "15E", "14W", "14E", "13W", "8W", "8E", "12W", "12E", "9W", "9E", "16W", "16E"],
                     repeatMissions: [
-                        { display: "Daily Panos", sharepoint: "251219 P SR PIT Daily Panos 1" },
-                        { display: "Daily Panos 2", sharepoint: "251219 P SR PIT Daily Panos 2" },
-                        { display: "Daily Panos 3", sharepoint: "251219 P SR PIT Daily Panos 3" },
-                        { display: "PIT Coal 8", sharepoint: "251219 S SR PIT Coal 8" },
-                        { display: "PIT Coal 9", sharepoint: "251219 S SR PIT Coal 9" },
-                        { display: "PIT Coal 12", sharepoint: "251219 S SR PIT Coal 12" },
-                        { display: "PIT Coal 13-14", sharepoint: "251219 S SR PIT Coal 13-14" },
-                        { display: "PIT Coal 15", sharepoint: "251219 S SR PIT Coal 15" },
-                        { display: "PIT Coal 16", sharepoint: "251219 S SR PIT Coal 16" },
-                        { display: "PIT Coal 1A", sharepoint: "251219 S SR PIT Coal 1A" },
-                        { display: "PIT Coal 2-4", sharepoint: "251219 S SR PIT Coal 2-4" },
-                        { display: "PIT Coal 6", sharepoint: "251219 S SR PIT Coal 6" }
+                        { display: "Daily Panos 1", sharepoint: "251219 P SR PIT Daily Panos 1", missionType: "Panorama" },
+                        { display: "Daily Panos 2", sharepoint: "251219 P SR PIT Daily Panos 2", missionType: "Panorama" },
+                        { display: "Daily Panos 3", sharepoint: "251219 P SR PIT Daily Panos 3", missionType: "Panorama" },
+                        { display: "PIT Coal 8", sharepoint: "251219 S SR PIT Coal 8", missionType: "Survey - Nadir (standard mapping survey)" },
+                        { display: "PIT Coal 9", sharepoint: "251219 S SR PIT Coal 9", missionType: "Survey - Nadir (standard mapping survey)" },
+                        { display: "PIT Coal 12", sharepoint: "251219 S SR PIT Coal 12", missionType: "Survey - Nadir (standard mapping survey)" },
+                        { display: "PIT Coal 13-14", sharepoint: "251219 S SR PIT Coal 13-14", missionType: "Survey - Nadir (standard mapping survey)" },
+                        { display: "PIT Coal 15", sharepoint: "251219 S SR PIT Coal 15", missionType: "Survey - Nadir (standard mapping survey)" },
+                        { display: "PIT Coal 16", sharepoint: "251219 S SR PIT Coal 16", missionType: "Survey - Nadir (standard mapping survey)" },
+                        { display: "PIT Coal 1A", sharepoint: "251219 S SR PIT Coal 1A", missionType: "Survey - Nadir (standard mapping survey)" },
+                        { display: "PIT Coal 2-4", sharepoint: "251219 S SR PIT Coal 2-4", missionType: "Survey - Nadir (standard mapping survey)" },
+                        { display: "PIT Coal 6", sharepoint: "251219 S SR PIT Coal 6", missionType: "Survey - Nadir (standard mapping survey)" }
                     ]
                 },
                 'GR': {
@@ -641,7 +641,7 @@
     }
 
     // ============================================================
-    // FORM SUBMISSION
+    // HELPER FUNCTIONS
     // ============================================================
     function formatDateYYMMDD(dateStr) {
         const date = new Date(dateStr);
@@ -651,6 +651,25 @@
         return `${yy}${mm}${dd}`;
     }
 
+    // Helper function to properly format attachment names including KML
+    function getAttachmentNames() {
+        const names = uploadedFiles.map(f => f.name);
+
+        // Add KML as a virtual file if exists
+        if (currentKmlData && currentKmlData.length > 0) {
+            const date = new Date();
+            const dateStr = formatDateYYMMDD(date.toISOString().split('T')[0]);
+            const siteKey = document.getElementById('siteSelection').value;
+            const area = document.getElementById('siteArea') ? document.getElementById('siteArea').value : 'drawing';
+            names.push(`${dateStr}_${siteKey}_${area}_drawing.kml`);
+        }
+
+        return names.join(', ') || 'None';
+    }
+
+    // ============================================================
+    // FORM SUBMISSION
+    // ============================================================
     async function handleSubmit(e) {
         e.preventDefault();
 
@@ -800,279 +819,300 @@
     }
 
     // Update the collectFormData function to match the schema
-function collectFormData() {
-    const form = document.getElementById('missionForm');
-    const dateFormatted = formatDateYYMMDD(form.missionDate.value);
-    const siteName = currentSite ? currentSite.name : form.siteSelection.value;
-    const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
+    function collectFormData() {
+        const form = document.getElementById('missionForm');
+        const dateFormatted = formatDateYYMMDD(form.missionDate.value);
+        const siteName = currentSite ? currentSite.name : form.siteSelection.value;
+        const hasAttachments = uploadedFiles.length > 0;
+        const hasKmlData = currentKmlData && currentKmlData.length > 0;
 
-    // Helper to safely get form field value
-    const getFieldValue = (fieldName, defaultValue = '') => {
-        const field = form.elements[fieldName];
-        return field ? field.value : defaultValue;
-    };
-
-    // Handle Repeat Mission request type
-    if (requestType === 'repeat') {
-        // Filter out empty rows (mission is now an object, not a string)
-        const validMissions = repeatMissionRows.filter(row => row.mission && row.mission.sharepoint);
-
-        if (validMissions.length === 0) {
-            throw new Error('Please select at least one repeat mission');
-        }
-
-        // Use repeat-specific field IDs
-        const repeatDate = document.getElementById('repeatMissionDate');
-        const repeatName = document.getElementById('repeatSubmitterName');
-        const repeatEmail = document.getElementById('repeatSubmitterEmail');
-        const repeatPhone = document.getElementById('repeatContactNumber');
-
-        const data = {
-            RequestType: 'Repeat Mission',
-            ScheduledDate: repeatDate ? repeatDate.value : '',
-            Company: currentCompany.name,
-            Site: siteName,
-            SiteKey: getFieldValue('siteSelection'),
-            RequestedBy: repeatName ? repeatName.value : '',
-            EmailContact: repeatEmail ? repeatEmail.value : '',
-            PhContact: repeatPhone ? repeatPhone.value : '',
-            Attachment: hasAttachments ? 'Yes' : 'No',
-            AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
-            SubmittedAt: new Date().toISOString(),
-
-            // Repeat missions array with full SharePoint field data
-            // SiteOrder is based on position in the list (1-indexed)
-            RepeatMissions: validMissions.map((row, index) => ({
-                Title: row.mission.sharepoint,           // SharePoint Title field
-                MissionName: row.mission.sharepoint,     // SharePoint name for lookup
-                DisplayName: row.mission.display,        // Human-readable name
-                Comment: row.comment || '',              // User comment/KML reference
-                SiteOrder: index + 1,                    // Position in order (1, 2, 3...)
-                Dock: row.mission.dock || '',            // Dock location from config
-                PlannedFlightTime: row.mission.plannedFlightTime || null,  // Flight time in minutes
-                MissionPlan: 'New Request',
-                JobStatus: 'Incomplete',
-                MissionType:  row.mission.missionType
-            })),
-
-            // Summary for title
-            Title: `${dateFormatted} ${getFieldValue('siteSelection')} Repeat Missions (${validMissions.length})`.trim()
+        // Helper to safely get form field value
+        const getFieldValue = (fieldName, defaultValue = '') => {
+            const field = form.elements[fieldName];
+            return field ? field.value : defaultValue;
         };
 
-        // Validate repeat mission data
-        validateRepeatFormData(data);
+        // Handle Repeat Mission request type
+        if (requestType === 'repeat') {
+            // Filter out empty rows (mission is now an object, not a string)
+            const validMissions = repeatMissionRows.filter(row => row.mission && row.mission.sharepoint);
+
+            if (validMissions.length === 0) {
+                throw new Error('Please select at least one repeat mission');
+            }
+
+            // Use repeat-specific field IDs
+            const repeatDate = document.getElementById('repeatMissionDate');
+            const repeatName = document.getElementById('repeatSubmitterName');
+            const repeatEmail = document.getElementById('repeatSubmitterEmail');
+            const repeatPhone = document.getElementById('repeatContactNumber');
+
+            // Get priority from the form (same field for both single and repeat)
+            const priority = document.getElementById('missionPriority').value || '3';
+
+            const data = {
+                RequestType: 'Repeat Mission',
+                ScheduledDate: repeatDate ? repeatDate.value : '',
+                Company: currentCompany.name,
+                Site: siteName,
+                SiteKey: getFieldValue('siteSelection'),
+                Priority: priority,  // Include priority for repeat missions
+                RequestedBy: repeatName ? repeatName.value : '',
+                EmailContact: repeatEmail ? repeatEmail.value : '',
+                PhContact: repeatPhone ? repeatPhone.value : '',
+                Attachment: (hasAttachments || hasKmlData) ? 'Yes' : 'No',
+                AttachmentNames: getAttachmentNames(),
+                HasKML: hasKmlData ? 'Yes' : 'No',
+                KMLData: hasKmlData ? currentKmlData : '',
+                SubmittedAt: new Date().toISOString(),
+
+                // Repeat missions array with full SharePoint field data
+                // SiteOrder is based on position in the list (1-indexed)
+                RepeatMissions: validMissions.map((row, index) => ({
+                    Title: row.mission.sharepoint,           // SharePoint Title field
+                    MissionName: row.mission.sharepoint,     // SharePoint name for lookup
+                    DisplayName: row.mission.display,        // Human-readable name
+                    MissionType: row.mission.missionType || 'Survey - Nadir (standard mapping survey)',  // Mission type from config
+                    Comment: row.comment || '',              // User comment/KML reference
+                    SiteOrder: index + 1,                    // Position in order (1, 2, 3...)
+                    Dock: row.mission.dock || '',            // Dock location from config
+                    PlannedFlightTime: row.mission.plannedFlightTime || null,  // Flight time in minutes
+                    MissionPlan: 'New Request',
+                    JobStatus: 'Incomplete'
+                })),
+
+                // Summary for title
+                Title: `${dateFormatted} ${getFieldValue('siteSelection')} Repeat Missions (${validMissions.length})`.trim()
+            };
+
+            // Validate repeat mission data
+            validateRepeatFormData(data);
+
+            return data;
+        }
+
+        // Handle Single Request type (original logic)
+        const frequencyType = document.querySelector('input[name="frequencyType"]:checked');
+        const isRepeating = frequencyType && frequencyType.value === 'Repeating';
+
+        let frequency = 'Once';
+        if (isRepeating && form.repeatFrequency && form.repeatFrequency.value) {
+            frequency = form.repeatFrequency.value;
+        }
+
+        const missionTypeVal = (form.missionType.value || '').trim();
+
+        // Normalize SharePoint-friendly mission type
+        const missionTypeForForm = (() => {
+          const map = {
+            'Survey - Nadir (standard mapping survey)': 'Survey',
+            'Survey - Oblique (e.g. pit wall models)': 'Survey',
+            'Panoramic (360-deg imagery)': 'Panoramic',
+            'Inspection imagery': 'Inspection',
+            'Video recording': 'Video',
+            'Video livestream': 'Livestream',
+            'Other': 'Other'
+          };
+          return map[missionTypeVal] || missionTypeVal || 'Other';
+        })();
+
+        // Build SharePoint-ready data object matching the schema
+        const data = {
+            // === SHAREPOINT FIELDS ===
+            RequestType: 'Single Request',
+            Title: `${dateFormatted} ${getFieldValue('siteSelection')} ${getFieldValue('siteArea')} ${getFieldValue('missionName')}`.trim(),
+            ScheduledDate: getFieldValue('missionDate'),
+            Company: currentCompany.name,
+            Site: siteName,
+            Priority: parseInt(getFieldValue('missionPriority')) || 3, // Integer 1-5
+            MissionType: missionTypeForForm,
+            Frequency: frequency,
+            MissionPlan: 'New Request',
+            JobStatus: 'Incomplete',
+            Comments: getFieldValue('missionName'),
+            CustomerComments: getFieldValue('customerComment'),
+            RequestedBy: getFieldValue('submitterName'),
+            EmailContact: getFieldValue('submitterEmail'),
+            PhContact: getFieldValue('contactNumber'),
+            Attachment: (hasAttachments || hasKmlData) ? 'Yes' : 'No',
+            CustomerParameters: form.customParams && form.customParams.checked ? 'Yes' : 'No',
+
+            // Custom parameters (only if enabled)
+            Resolution: form.customParams && form.customParams.checked && getFieldValue('imageResolution') ? parseFloat(getFieldValue('imageResolution')) : null,
+            HeightAGL: form.customParams && form.customParams.checked && getFieldValue('missionHeight') ? parseInt(getFieldValue('missionHeight')) : null,
+            SideOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapSide') ? parseInt(getFieldValue('overlapSide')) : null,
+            ForwardOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapForward') ? parseInt(getFieldValue('overlapForward')) : null,
+            TerrainFollow: form.customParams && form.customParams.checked ? getFieldValue('terrainFollowing') : '',
+            ElevOpt: form.customParams && form.customParams.checked ? getFieldValue('elevationOptimisation') : '',
+
+            // === METADATA ===
+            SiteArea: getFieldValue('siteArea'),
+            SiteKey: getFieldValue('siteSelection'),
+            SubmittedAt: new Date().toISOString(),
+
+            // File names and KML data
+            AttachmentNames: getAttachmentNames(),
+            HasKML: hasKmlData ? 'Yes' : 'No',
+            KMLData: hasKmlData ? currentKmlData : '',
+            KMLFileName: hasKmlData ? `${dateFormatted}_${getFieldValue('siteSelection')}_${getFieldValue('siteArea')}_drawing.kml` : ''
+        };
+
+        // Validate data types according to schema
+        validateFormData(data);
+
+        // Remove null values for cleaner JSON
+        Object.keys(data).forEach(key => {
+            if (data[key] === null || data[key] === undefined || data[key] === '') {
+                delete data[key];
+            }
+        });
 
         return data;
     }
 
-    // Handle Single Request type (original logic)
-    const frequencyType = document.querySelector('input[name="frequencyType"]:checked');
-    const isRepeating = frequencyType && frequencyType.value === 'Repeating';
-
-    let frequency = 'Once';
-    if (isRepeating && form.repeatFrequency && form.repeatFrequency.value) {
-        frequency = form.repeatFrequency.value;
-    }
-
-    const missionTypeVal = (form.missionType.value || '').trim();
-
-    // Normalize SharePoint-friendly mission type
-    const missionTypeForForm = (() => {
-      const map = {
-        'Survey - Nadir (standard mapping survey)': 'Survey',
-        'Survey - Oblique (e.g. pit wall models)': 'Survey',
-        'Panoramic (360-deg imagery)': 'Panoramic',
-        'Inspection imagery': 'Inspection',
-        'Video recording': 'Video',
-        'Video livestream': 'Livestream',
-        'Other': 'Other'
-      };
-      return map[missionTypeVal] || missionTypeVal || 'Other';
-    })();
-
-    // Build SharePoint-ready data object matching the schema
-    const data = {
-        // === SHAREPOINT FIELDS ===
-        RequestType: 'Single Request',
-        Title: `${dateFormatted} ${getFieldValue('siteSelection')} ${getFieldValue('siteArea')} ${getFieldValue('missionName')}`.trim(),
-        ScheduledDate: getFieldValue('missionDate'),
-        Company: currentCompany.name,
-        Site: siteName,
-        Priority: parseInt(getFieldValue('missionPriority')) || 3, // Integer 1-5
-        MissionType: missionTypeForForm,
-        Frequency: frequency,
-        MissionPlan: 'New Request',
-        JobStatus: 'Incomplete',
-        Comments: getFieldValue('missionName'),
-        CustomerComments: getFieldValue('customerComment'),
-        RequestedBy: getFieldValue('submitterName'),
-        EmailContact: getFieldValue('submitterEmail'),
-        PhContact: getFieldValue('contactNumber'),
-        Attachment: hasAttachments ? 'Yes' : 'No',
-        CustomerParameters: form.customParams && form.customParams.checked ? 'Yes' : 'No',
-
-        // Custom parameters (only if enabled)
-        Resolution: form.customParams && form.customParams.checked && getFieldValue('imageResolution') ? parseFloat(getFieldValue('imageResolution')) : null,
-        HeightAGL: form.customParams && form.customParams.checked && getFieldValue('missionHeight') ? parseInt(getFieldValue('missionHeight')) : null,
-        SideOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapSide') ? parseInt(getFieldValue('overlapSide')) : null,
-        ForwardOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapForward') ? parseInt(getFieldValue('overlapForward')) : null,
-        TerrainFollow: form.customParams && form.customParams.checked ? getFieldValue('terrainFollowing') : '',
-        ElevOpt: form.customParams && form.customParams.checked ? getFieldValue('elevationOptimisation') : '',
-
-        // === METADATA ===
-        SiteArea: getFieldValue('siteArea'),
-        SiteKey: getFieldValue('siteSelection'),
-        SubmittedAt: new Date().toISOString(),
-
-        // File names only
-        AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
-        HasKML: currentKmlData ? 'Yes' : 'No'
-    };
-
-    // Validate data types according to schema
-    validateFormData(data);
-
-    // Remove null values for cleaner JSON
-    Object.keys(data).forEach(key => {
-        if (data[key] === null || data[key] === undefined || data[key] === '') {
-            delete data[key];
+    // Validation for repeat mission form
+    function validateRepeatFormData(data) {
+        if (!data.ScheduledDate) {
+            throw new Error('Scheduled date is required');
         }
-    });
-
-    return data;
-}
-
-// Validation for repeat mission form
-function validateRepeatFormData(data) {
-    if (!data.ScheduledDate) {
-        throw new Error('Scheduled date is required');
-    }
-    if (!data.RequestedBy) {
-        throw new Error('Your name is required');
-    }
-    if (!data.EmailContact) {
-        throw new Error('Email is required');
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.EmailContact)) {
-        throw new Error('Please enter a valid email address');
-    }
-
-    const selectedDate = new Date(data.ScheduledDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) {
-        throw new Error('Scheduled date cannot be in the past');
-    }
-
-    return true;
-}
-
-// Add validation function
-function validateFormData(data) {
-    // Validate required fields
-    const requiredFields = ['Title', 'ScheduledDate', 'Company', 'Site', 'Priority', 'MissionType', 'RequestedBy', 'EmailContact'];
-    requiredFields.forEach(field => {
-        if (!data[field]) {
-            throw new Error(`${field} is required`);
+        if (!data.RequestedBy) {
+            throw new Error('Your name is required');
         }
-    });
+        if (!data.EmailContact) {
+            throw new Error('Email is required');
+        }
 
-    // Validate data types
-    if (data.Priority && (data.Priority < 1 || data.Priority > 5)) {
-        throw new Error('Priority must be between 1 and 5');
-    }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(data.EmailContact)) {
+            throw new Error('Please enter a valid email address');
+        }
 
-    if (data['Site Order'] && !Number.isInteger(data['Site Order'])) {
-        throw new Error('Site Order must be an integer');
-    }
-
-    if (data.PlannedFlightTime && typeof data.PlannedFlightTime !== 'number') {
-        throw new Error('Planned Flight Time must be a number');
-    }
-
-    if (data.Resolution && typeof data.Resolution !== 'number') {
-        throw new Error('Resolution must be a number');
-    }
-
-    if (data.HeightAGL && !Number.isInteger(data.HeightAGL)) {
-        throw new Error('Height AGL must be an integer');
-    }
-
-    if (data.SideOverlap && !Number.isInteger(data.SideOverlap)) {
-        throw new Error('Side Overlap must be an integer');
-    }
-
-    if (data.ForwardOverlap && !Number.isInteger(data.ForwardOverlap)) {
-        throw new Error('Forward Overlap must be an integer');
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (data.EmailContact && !emailRegex.test(data.EmailContact)) {
-        throw new Error('Please enter a valid email address');
-    }
-
-    // Validate date is not in the past
-    const selectedDate = new Date(data.ScheduledDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) {
-        throw new Error('Scheduled date cannot be in the past');
-    }
+        const selectedDate = new Date(data.ScheduledDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate < today) {
+            throw new Error('Scheduled date cannot be in the past');
+        }
 
         return true;
     }
 
-        async function sendViaEmailJS(formData) {
-            const refId = `MR-${Date.now().toString(36).toUpperCase()}`;
-
-            // Create clean JSON for Power Automate parsing
-            const jsonData = JSON.stringify(formData, null, 2);
-
-            // Build template params based on request type
-            let templateParams = {
-                title: formData.Title,
-                ref_id: refId,
-                json_data: jsonData,
-                submitted_at: new Date().toLocaleString('en-AU', { timeZone: 'Australia/Perth' }),
-                company: formData.Company,
-                site: formData.Site,
-                scheduled_date: formData.ScheduledDate,
-                requested_by: formData.RequestedBy,
-                email: formData.EmailContact,
-                phone: formData.PhContact || 'Not provided',
-                request_type: formData.RequestType || 'Single Request'
-            };
-
-            // Add type-specific fields
-            if (formData.RequestType === 'Repeat Mission') {
-                templateParams.site_area = 'N/A';
-                templateParams.mission_name = `${formData.RepeatMissions.length} repeat mission(s)`;
-                templateParams.mission_type = 'Repeat';
-                templateParams.priority = 'N/A';
-                templateParams.repeat_missions = formData.RepeatMissions.map(m => m.MissionName).join(', ');
-            } else {
-                templateParams.site_area = formData.SiteArea;
-                templateParams.mission_name = formData.Comments;
-                templateParams.mission_type = formData.MissionType;
-                templateParams.priority = formData.Priority;
+    // Add validation function
+    function validateFormData(data) {
+        // Validate required fields
+        const requiredFields = ['Title', 'ScheduledDate', 'Company', 'Site', 'Priority', 'MissionType', 'RequestedBy', 'EmailContact'];
+        requiredFields.forEach(field => {
+            if (!data[field]) {
+                throw new Error(`${field} is required`);
             }
+        });
 
-            const response = await emailjs.send(
-                EMAILJS_CONFIG.serviceId,
-                EMAILJS_CONFIG.templateId,
-                templateParams
-            );
-
-            if (response.status !== 200) {
-                throw new Error('Failed to send email');
-            }
-
-            return refId;
+        // Validate data types
+        if (data.Priority && (data.Priority < 1 || data.Priority > 5)) {
+            throw new Error('Priority must be between 1 and 5');
         }
 
-        // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', init);
-    })();
+        if (data['Site Order'] && !Number.isInteger(data['Site Order'])) {
+            throw new Error('Site Order must be an integer');
+        }
+
+        if (data.PlannedFlightTime && typeof data.PlannedFlightTime !== 'number') {
+            throw new Error('Planned Flight Time must be a number');
+        }
+
+        if (data.Resolution && typeof data.Resolution !== 'number') {
+            throw new Error('Resolution must be a number');
+        }
+
+        if (data.HeightAGL && !Number.isInteger(data.HeightAGL)) {
+            throw new Error('Height AGL must be an integer');
+        }
+
+        if (data.SideOverlap && !Number.isInteger(data.SideOverlap)) {
+            throw new Error('Side Overlap must be an integer');
+        }
+
+        if (data.ForwardOverlap && !Number.isInteger(data.ForwardOverlap)) {
+            throw new Error('Forward Overlap must be an integer');
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (data.EmailContact && !emailRegex.test(data.EmailContact)) {
+            throw new Error('Please enter a valid email address');
+        }
+
+        // Validate date is not in the past
+        const selectedDate = new Date(data.ScheduledDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate < today) {
+            throw new Error('Scheduled date cannot be in the past');
+        }
+
+        return true;
+    }
+
+    async function sendViaEmailJS(formData) {
+        const refId = `MR-${Date.now().toString(36).toUpperCase()}`;
+
+        // Create clean JSON for Power Automate parsing
+        const jsonData = JSON.stringify(formData, null, 2);
+
+        // Build template params based on request type
+        let templateParams = {
+            title: formData.Title,
+            ref_id: refId,
+            json_data: jsonData,
+            submitted_at: new Date().toLocaleString('en-AU', { timeZone: 'Australia/Perth' }),
+            company: formData.Company,
+            site: formData.Site,
+            scheduled_date: formData.ScheduledDate,
+            requested_by: formData.RequestedBy,
+            email: formData.EmailContact,
+            phone: formData.PhContact || 'Not provided',
+            request_type: formData.RequestType || 'Single Request',
+
+            // Add attachment info for Power Automate
+            has_attachments: (uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0)) ? 'Yes' : 'No',
+            attachment_count: uploadedFiles.length + (currentKmlData ? 1 : 0),
+            attachment_names: getAttachmentNames(),
+            has_kml: (currentKmlData && currentKmlData.length > 0) ? 'Yes' : 'No'
+        };
+
+        // Add type-specific fields
+        if (formData.RequestType === 'Repeat Mission') {
+            templateParams.site_area = 'N/A';
+            templateParams.mission_name = `${formData.RepeatMissions.length} repeat mission(s)`;
+            templateParams.mission_type = 'Repeat';
+            templateParams.priority = formData.Priority;
+            templateParams.repeat_missions = formData.RepeatMissions.map(m => m.MissionName).join(', ');
+        } else {
+            templateParams.site_area = formData.SiteArea;
+            templateParams.mission_name = formData.Comments;
+            templateParams.mission_type = formData.MissionType;
+            templateParams.priority = formData.Priority;
+        }
+
+        // If there's KML data, add it as base64 for email transport
+        if (currentKmlData && currentKmlData.length > 0) {
+            templateParams.kml_data_base64 = btoa(unescape(encodeURIComponent(currentKmlData)));
+            templateParams.kml_file_name = `${formatDateYYMMDD(new Date().toISOString().split('T')[0])}_${formData.SiteKey}_drawing.kml`;
+        }
+
+        const response = await emailjs.send(
+            EMAILJS_CONFIG.serviceId,
+            EMAILJS_CONFIG.templateId,
+            templateParams
+        );
+
+        if (response.status !== 200) {
+            throw new Error('Failed to send email');
+        }
+
+        return refId;
+    }
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', init);
+})();
