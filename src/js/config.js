@@ -22,85 +22,73 @@ const COMPANY_CONFIG = {
                         display: "Daily Panos 1", 
                         sharepoint: "251219 P SR PIT Daily Panos 1",
                         dock: "",
-                        plannedFlightTime: 15,
-                        missionType: 'Panoramic'
+                        plannedFlightTime: 15
                     },
                     { 
                         display: "Daily Panos 2", 
                         sharepoint: "251219 P SR PIT Daily Panos 2",
                         dock: "",
-                        plannedFlightTime: 15,
-                        missionType: 'Panoramic'
+                        plannedFlightTime: 15
                     },
                     { 
                         display: "Daily Panos 3", 
                         sharepoint: "251219 P SR PIT Daily Panos 3",
                         dock: "",
-                        plannedFlightTime: 15,
-                        missionType: 'Panoramic'
+                        plannedFlightTime: 15
                     },
                     { 
                         display: "PIT Coal 8", 
                         sharepoint: "251219 S SR PIT Coal 8",
                         dock: "",
-                        plannedFlightTime: 25,
-                        missionType: 'Survey'
+                        plannedFlightTime: 25
                     },
                     { 
                         display: "PIT Coal 9", 
                         sharepoint: "251219 S SR PIT Coal 9",
                         dock: "",
-                        plannedFlightTime: 25,
-                        missionType: 'Survey'
+                        plannedFlightTime: 25
                     },
                     { 
                         display: "PIT Coal 12", 
                         sharepoint: "251219 S SR PIT Coal 12",
                         dock: "",
-                        plannedFlightTime: 25,
-                        missionType: 'Survey'
+                        plannedFlightTime: 25
                     },
                     { 
                         display: "PIT Coal 13-14", 
                         sharepoint: "251219 S SR PIT Coal 13-14",
                         dock: "",
-                        plannedFlightTime: 30,
-                        missionType: 'Survey'
+                        plannedFlightTime: 30
                     },
                     { 
                         display: "PIT Coal 15", 
                         sharepoint: "251219 S SR PIT Coal 15",
                         dock: "",
-                        plannedFlightTime: 25,
-                        missionType: 'Survey'
+                        plannedFlightTime: 25
                     },
                     { 
                         display: "PIT Coal 16", 
                         sharepoint: "251219 S SR PIT Coal 16",
                         dock: "",
-                        plannedFlightTime: 25,
-                        missionType: 'Survey'
+                        plannedFlightTime: 25
                     },
                     { 
                         display: "PIT Coal 1A", 
                         sharepoint: "251219 S SR PIT Coal 1A",
                         dock: "",
-                        plannedFlightTime: 25,
-                        missionType: 'Survey'
+                        plannedFlightTime: 25
                     },
                     { 
                         display: "PIT Coal 2-4", 
                         sharepoint: "251219 S SR PIT Coal 2-4",
                         dock: "",
-                        plannedFlightTime: 35,
-                        missionType: 'Survey'
+                        plannedFlightTime: 35
                     },
                     { 
                         display: "PIT Coal 6", 
                         sharepoint: "251219 S SR PIT Coal 6",
                         dock: "",
-                        plannedFlightTime: 25,
-                        missionType: 'Survey'
+                        plannedFlightTime: 25
                     }
                 ]
             },
@@ -149,3 +137,8 @@ const EMAILJS_CONFIG = {
     serviceId: 'service_4j8dixs',         // Email Services → Service ID
     templateId: 'template_152awpf'        // Email Templates → Template ID
 };
+
+// Export for use in app.js (if using modules) or just use globally
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { COMPANY_CONFIG, EMAILJS_CONFIG };
+}

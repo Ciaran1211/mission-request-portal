@@ -32,28 +32,30 @@
 
 body {
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--light-bg);
+    background: linear-gradient(135deg, #E76F41 0%, #0ABAEF 50%, #0F2458 100%) !important;
+    background-attachment: fixed !important;
+    background-repeat: no-repeat !important;
+    background-size: cover !important;
     color: var(--navy);
     line-height: 1.6;
     min-height: 100vh;
 }
 
-/* App Container */
+/* App Container - Matching JotForm Style */
 .app-container {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    padding: 20px;
 }
 
 /* Header */
 .app-header {
-    background: var(--navy);
+    background: transparent;
     color: var(--white);
-    padding: 16px 24px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: var(--shadow-md);
+    padding: 16px 0;
+    position: relative;
+    margin-bottom: 20px;
 }
 
 .logo {
@@ -62,8 +64,9 @@ body {
     gap: 12px;
     font-size: 18px;
     font-weight: 600;
-    max-width: 900px;
+    max-width: 800px;
     margin: 0 auto;
+    color: white;
 }
 
 .logo svg {
@@ -85,78 +88,31 @@ body {
     display: none;
 }
 
-/* Main Content */
+/* Main Content - JotForm Style Container */
 .main-content {
     flex: 1;
-    max-width: 900px;
+    max-width: 800px;
     width: 100%;
     margin: 0 auto;
-    padding: 32px 24px;
+    background-color: rgba(239, 239, 239, 0.6) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(15, 36, 88, 0.25);
+    padding: 30px !important;
 }
 
-/* Error Container (Invalid Company) */
-.error-container {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-}
-
-.error-card {
-    background: var(--white);
-    border-radius: var(--radius-lg);
-    padding: 60px 48px;
-    text-align: center;
-    box-shadow: var(--shadow-lg);
-    max-width: 450px;
-}
-
-.error-card svg {
-    color: var(--orange);
-    margin-bottom: 24px;
-}
-
-.error-card h2 {
-    font-size: 24px;
-    margin-bottom: 12px;
-    color: var(--navy);
-}
-
-.error-card p {
-    color: var(--gray-600);
-    margin-bottom: 8px;
-}
-
-.error-card .hint {
-    margin-top: 20px;
-    font-size: 14px;
-    color: var(--gray-500);
-}
-
-.error-card code {
-    background: var(--gray-100);
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-family: 'Monaco', 'Consolas', monospace;
-    font-size: 13px;
-    color: var(--navy);
-}
-
-/* Form */
-.mission-form {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-/* Form Sections */
+/* Form Sections - More Compact */
 .form-section {
-    background: var(--white);
-    border-radius: var(--radius-lg);
-    padding: 28px;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--gray-200);
+    background: transparent;
+    border-radius: var(--radius-sm);
+    padding: 20px 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(10, 186, 239, 0.2);
+}
+
+.form-section:last-child {
+    border-bottom: none;
 }
 
 .section-title {
@@ -165,7 +121,7 @@ body {
     gap: 14px;
     font-size: 18px;
     font-weight: 600;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
     color: var(--navy);
 }
 
@@ -182,22 +138,18 @@ body {
     font-weight: 600;
 }
 
-.section-description {
-    color: var(--gray-500);
-    margin-bottom: 20px;
-}
-
-/* Form Grid */
+/* Form Grid - More Compact */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+    gap: 15px;
+    margin-bottom: 10px;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .form-group.full-width {
@@ -207,33 +159,39 @@ body {
 .form-group label {
     font-size: 14px;
     font-weight: 500;
-    color: var(--gray-700);
+    color: var(--navy);
+    margin-bottom: 4px;
 }
 
+/* Form Inputs - JotForm Style */
 .form-group input,
 .form-group select,
 .form-group textarea {
-    padding: 12px 14px;
-    border: 1px solid var(--gray-300);
-    border-radius: var(--radius-sm);
-    font-size: 15px;
+    padding: 12px 14px !important;
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    border: 2px solid rgba(10, 186, 239, 0.3) !important;
+    border-radius: 12px !important;
+    font-size: 15px !important;
     font-family: inherit;
-    color: var(--navy);
-    background: var(--white);
-    transition: all 0.2s ease;
+    color: #222222 !important;
+    transition: all 0.3s ease !important;
+    min-height: 45px !important;
+    line-height: 1.4 !important;
+    width: 100% !important;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: var(--cyan);
+    border-color: var(--cyan) !important;
     box-shadow: 0 0 0 3px rgba(10, 186, 239, 0.15);
+    background-color: rgba(255, 255, 255, 0.95) !important;
 }
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-    color: var(--gray-400);
+    color: var(--gray-400) !important;
 }
 
 .form-group textarea {
@@ -241,7 +199,19 @@ body {
     min-height: 100px;
 }
 
-/* Request Type Toggle */
+/* Custom Select Arrow */
+.form-group select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%230F2458' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 12px) center;
+    background-size: 12px;
+    padding-right: 35px !important;
+}
+
+/* Request Type Toggle - Radio Style */
 .request-type-toggle {
     display: flex;
     gap: 12px;
@@ -257,16 +227,21 @@ body {
     align-items: center;
     gap: 10px;
     padding: 16px 24px;
-    background: var(--gray-100);
-    border: 2px solid transparent;
-    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.7) !important;
+    border: 2px solid rgba(10, 186, 239, 0.3) !important;
+    border-radius: 12px !important;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     font-weight: 500;
+    min-height: 45px !important;
+    line-height: 1.4 !important;
+    width: 100% !important;
+    position: relative;
 }
 
 .toggle-option:hover {
-    background: var(--gray-200);
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: var(--cyan) !important;
 }
 
 .toggle-option svg {
@@ -274,8 +249,8 @@ body {
 }
 
 input[type="radio"]:checked + .toggle-option {
-    background: rgba(10, 186, 239, 0.1);
-    border-color: var(--cyan);
+    background: rgba(10, 186, 239, 0.1) !important;
+    border-color: var(--cyan) !important;
     color: var(--navy);
 }
 
@@ -283,13 +258,100 @@ input[type="radio"]:checked + .toggle-option svg {
     color: var(--cyan);
 }
 
-/* Checkbox */
+/* Custom Radio/Checkbox Styling */
+.form-radio-item,
+.form-checkbox-item {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    border: 2px solid rgba(10, 186, 239, 0.3) !important;
+    border-radius: 12px !important;
+    padding: 10px 35px 10px 12px !important;
+    margin-bottom: 8px !important;
+    min-height: 45px !important;
+    line-height: 1.4 !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.form-radio-item label,
+.form-checkbox-item label {
+    color: #0F2458 !important;
+    font-size: 15px !important;
+    margin-left: 8px !important;
+    cursor: pointer !important;
+    display: block !important;
+    width: 100% !important;
+    padding-top: 2px !important;
+}
+
+/* Custom radio/checkbox indicator */
+.form-radio-item input[type="radio"],
+.form-checkbox-item input[type="checkbox"] {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    width: 20px !important;
+    height: 20px !important;
+    border: 2px solid rgba(10, 186, 239, 0.5) !important;
+    border-radius: 50% !important;
+    background-color: white !important;
+    cursor: pointer !important;
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    margin: 0 !important;
+    transition: all 0.3s ease !important;
+}
+
+.form-checkbox-item input[type="checkbox"] {
+    border-radius: 4px !important;
+}
+
+/* Checked state */
+.form-radio-item input[type="radio"]:checked,
+.form-checkbox-item input[type="checkbox"]:checked {
+    background-color: #0ABAEF !important;
+    border-color: #0ABAEF !important;
+    box-shadow: 0 0 0 2px rgba(10, 186, 239, 0.2) !important;
+}
+
+/* Checkmark for checkbox */
+.form-checkbox-item input[type="checkbox"]:checked::before {
+    content: "âœ“" !important;
+    color: white !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+/* Dot for radio */
+.form-radio-item input[type="radio"]:checked::before {
+    content: "" !important;
+    width: 8px !important;
+    height: 8px !important;
+    background-color: white !important;
+    border-radius: 50% !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+/* Checkbox Label */
 .checkbox-label {
     display: flex;
     align-items: center;
     gap: 12px;
     cursor: pointer;
     font-size: 15px;
+    margin-bottom: 15px;
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -299,13 +361,14 @@ input[type="radio"]:checked + .toggle-option svg {
 .checkbox-custom {
     width: 22px;
     height: 22px;
-    border: 2px solid var(--gray-300);
+    border: 2px solid rgba(10, 186, 239, 0.5);
     border-radius: 5px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     flex-shrink: 0;
+    background-color: white;
 }
 
 .checkbox-label input:checked + .checkbox-custom {
@@ -327,83 +390,44 @@ input[type="radio"]:checked + .toggle-option svg {
 .params-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
+    gap: 15px;
+    margin-top: 15px;
     padding: 20px;
-    background: var(--gray-100);
+    background: rgba(255, 255, 255, 0.7);
     border-radius: var(--radius-md);
-}
-
-/* Custom Parameters Section */
-.custom-params-section {
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid var(--gray-200);
-}
-
-/* Repeating Options */
-.repeating-options {
-    margin-top: 20px;
-    padding: 20px;
-    background: var(--gray-100);
-    border-radius: var(--radius-md);
-}
-
-.repeating-options .form-group {
-    max-width: 300px;
-}
-
-/* Flight List */
-.flight-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.flight-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    background: var(--gray-100);
-    border-radius: var(--radius-sm);
-    transition: background 0.2s ease;
-}
-
-.flight-item:hover {
-    background: var(--gray-200);
-}
-
-.flight-info {
-    font-size: 13px;
-    color: var(--gray-500);
+    border: 1px solid rgba(10, 186, 239, 0.2);
 }
 
 /* Map Section */
 .map-section {
-    margin-top: 24px;
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(10, 186, 239, 0.2);
 }
 
 .map-section h3 {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 8px;
+    color: var(--navy);
 }
 
 .map-instructions {
     font-size: 14px;
-    color: var(--gray-500);
-    margin-bottom: 16px;
+    color: var(--gray-600);
+    margin-bottom: 12px;
 }
 
-/* Map Widget Container (iframe) */
+/* Map Widget Container */
 .map-widget-container {
     position: relative;
     width: 100%;
-    height: 550px;
+    height: 800px;
     border-radius: var(--radius-md);
     overflow: hidden;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-sm);
     border: 1px solid var(--gray-200);
 }
 
@@ -413,25 +437,25 @@ input[type="radio"]:checked + .toggle-option svg {
     border: none;
 }
 
-/* File Upload */
+/* File Upload - JotForm Style */
 .file-upload-area {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
-    border: 2px dashed var(--gray-300);
-    border-radius: var(--radius-md);
-    background: var(--gray-100);
+    padding: 30px 20px;
+    border: 2px dashed rgba(10, 186, 239, 0.3);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.8);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     text-align: center;
 }
 
 .file-upload-area:hover,
 .file-upload-area.drag-over {
     border-color: var(--cyan);
-    background: rgba(10, 186, 239, 0.05);
+    background: rgba(10, 186, 239, 0.1);
 }
 
 .file-upload-area svg {
@@ -455,11 +479,12 @@ input[type="radio"]:checked + .toggle-option svg {
     color: var(--gray-400);
 }
 
+/* File List */
 .file-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 16px;
+    margin-top: 12px;
 }
 
 .file-item {
@@ -467,8 +492,9 @@ input[type="radio"]:checked + .toggle-option svg {
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    background: var(--gray-100);
-    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    border: 1px solid rgba(10, 186, 239, 0.2);
 }
 
 .file-item-info {
@@ -479,10 +505,11 @@ input[type="radio"]:checked + .toggle-option svg {
 
 .file-item-name {
     font-weight: 500;
+    font-size: 14px;
 }
 
 .file-item-size {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--gray-500);
 }
 
@@ -503,7 +530,9 @@ input[type="radio"]:checked + .toggle-option svg {
 .form-actions {
     display: flex;
     justify-content: flex-end;
-    padding-top: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    border-top: 1px solid rgba(10, 186, 239, 0.2);
 }
 
 .submit-btn {
@@ -519,7 +548,7 @@ input[type="radio"]:checked + .toggle-option svg {
     border: none;
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(10, 186, 239, 0.3);
 }
 
@@ -627,18 +656,223 @@ input[type="radio"]:checked + .toggle-option svg {
     background: var(--blue-mid);
 }
 
+/* Priority Tooltip - New Design */
+.priority-help-container {
+    margin-top: 8px;
+    position: relative;
+    width: 100%;
+    z-index: 100;
+}
+
+.priority-help-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--cyan);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.priority-help-button:hover {
+    background: rgba(10, 186, 239, 0.1);
+    color: var(--navy);
+}
+
+.priority-help-button svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.priority-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-width: 380px;
+    background: var(--white);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--gray-200);
+    z-index: 1000;
+    margin-top: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.priority-tooltip.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.priority-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 20px;
+    width: 12px;
+    height: 12px;
+    background: var(--white);
+    transform: rotate(45deg);
+    border-left: 1px solid var(--gray-200);
+    border-top: 1px solid var(--gray-200);
+}
+
+.priority-guidelines {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.guideline-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.guideline-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.priority-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.priority-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+}
+
+.priority-1 {
+    background-color: var(--red);
+}
+
+.priority-2 {
+    background-color: var(--orange);
+}
+
+.priority-3 {
+    background-color: var(--yellow);
+    color: var(--navy);
+}
+
+.priority-4 {
+    background-color: var(--green);
+}
+
+.priority-5 {
+    background-color: var(--cyan);
+}
+
+.priority-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+}
+
+.priority-description {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--gray-600);
+    margin: 0;
+}
+
+.priority-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(10, 186, 239, 0.08);
+    border-radius: var(--radius-sm);
+    margin-top: 4px;
+}
+
+.priority-tip svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--cyan);
+}
+
+.priority-tip-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--navy);
+    margin: 0;
+}
+
+/* Priority dropdown styling */
+#missionPriority option[value="1"] {
+    background-color: var(--white);
+    color: var(--red);
+    font-weight: 600;
+}
+
+#missionPriority option[value="2"] {
+    background-color: var(--white);
+    color: var(--orange);
+    font-weight: 600;
+}
+
+#missionPriority option[value="3"] {
+    background-color: var(--white);
+    color: var(--navy);
+    font-weight: 600;
+}
+
+#missionPriority option[value="4"] {
+    background-color: var(--white);
+    color: var(--green);
+    font-weight: 600;
+}
+
+#missionPriority option[value="5"] {
+    background-color: var(--white);
+    color: var(--cyan);
+    font-weight: 600;
+}
+
 /* Responsive */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+    }
+
     .main-content {
-        padding: 16px;
+        padding: 20px !important;
     }
     
     .form-section {
-        padding: 20px;
+        padding: 15px 0;
     }
     
     .form-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
     }
     
     .request-type-toggle {
@@ -646,11 +880,12 @@ input[type="radio"]:checked + .toggle-option svg {
     }
     
     .map-widget-container {
-        height: 400px;
+        height: 500px;
     }
     
     .submit-btn {
         width: 100%;
+        padding: 14px 24px;
     }
     
     .company-badge {
@@ -664,121 +899,206 @@ input[type="radio"]:checked + .toggle-option svg {
     .params-grid {
         grid-template-columns: 1fr;
     }
+
+    .priority-tooltip {
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 15px !important;
+    }
     
-    .error-card {
-        padding: 40px 24px;
+    .section-title {
+        font-size: 16px;
+    }
+
+    .section-number {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+
+    .priority-tooltip {
+        max-width: 280px;
+        padding: 15px;
     }
 }
 
 /* ============================================================
-   REPEAT MISSIONS STYLES
+   REPEAT MISSIONS TABLE
    ============================================================ */
 
-.section-description {
-    color: var(--gray-600);
-    margin-bottom: 16px;
-    font-size: 14px;
-}
-
-.repeat-missions-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.no-missions-message {
-    color: var(--gray-500);
-    font-style: italic;
-    padding: 20px;
-    text-align: center;
-    background: var(--gray-100);
-    border-radius: var(--radius-md);
-}
-
-.repeat-mission-item {
-    background: var(--white);
-    border: 1px solid var(--gray-200);
+.repeat-missions-table-container {
+    background: rgba(255, 255, 255, 0.7);
     border-radius: var(--radius-md);
     padding: 16px;
+    border: 1px solid rgba(10, 186, 239, 0.2);
+}
+
+.repeat-missions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+
+.repeat-missions-table thead th {
+    text-align: left;
+    padding: 12px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    border-bottom: 2px solid rgba(10, 186, 239, 0.3);
+}
+
+.repeat-missions-table thead th:first-child {
+    width: 45%;
+}
+
+.repeat-missions-table thead th:last-child {
+    width: 50px;
+    text-align: center;
+}
+
+.repeat-mission-row td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+.repeat-mission-select {
+    width: 100%;
+    padding: 10px 12px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(10, 186, 239, 0.3);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--navy);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%230F2458' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 12px) center;
+    background-size: 12px;
+    padding-right: 35px;
+}
+
+.repeat-mission-select:focus {
+    outline: none;
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(10, 186, 239, 0.15);
+}
+
+.repeat-mission-comment {
+    width: 100%;
+    padding: 10px 12px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(10, 186, 239, 0.3);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--navy);
     transition: all 0.2s ease;
 }
 
-.repeat-mission-item:hover {
-    border-color: var(--cyan);
-    box-shadow: var(--shadow-sm);
-}
-
-.mission-checkbox-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.mission-checkbox-row .checkbox-label {
-    margin-bottom: 0;
-    flex: 1;
-}
-
-.mission-display-name {
-    font-weight: 500;
-    color: var(--navy);
-}
-
-.mission-time {
-    font-size: 12px;
-    color: var(--gray-500);
-    background: var(--gray-100);
-    padding: 4px 8px;
-    border-radius: 4px;
-    white-space: nowrap;
-}
-
-.mission-comment-row {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--gray-100);
-}
-
-.mission-comment-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    font-family: inherit;
-    transition: border-color 0.2s ease;
-}
-
-.mission-comment-input:focus {
+.repeat-mission-comment:focus {
     outline: none;
     border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(10, 186, 239, 0.15);
 }
 
-.mission-comment-input::placeholder {
+.repeat-mission-comment::placeholder {
     color: var(--gray-400);
 }
 
-/* Checkbox styling for repeat missions */
-.repeat-mission-item .checkbox-label input:checked + .checkbox-custom {
-    background: var(--cyan);
+.repeat-mission-actions {
+    text-align: center;
+}
+
+.remove-row-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(239, 68, 68, 0.1);
+    border: none;
+    border-radius: 6px;
+    color: var(--red);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.remove-row-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.add-row-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(10, 186, 239, 0.1);
+    border: 2px dashed rgba(10, 186, 239, 0.4);
+    border-radius: 8px;
+    color: var(--cyan);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.add-row-btn:hover {
+    background: rgba(10, 186, 239, 0.2);
     border-color: var(--cyan);
 }
 
-.repeat-mission-item:has(input:checked) {
-    border-color: var(--cyan);
-    background: rgba(10, 186, 239, 0.03);
-}
-
-/* Responsive adjustments for repeat missions */
-@media (max-width: 640px) {
-    .mission-checkbox-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
+/* Responsive adjustments for repeat missions table */
+@media (max-width: 768px) {
+    .repeat-missions-table thead {
+        display: none;
     }
-    
-    .mission-time {
-        margin-left: 34px;
+
+    .repeat-mission-row {
+        display: block;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        border: 1px solid rgba(10, 186, 239, 0.2);
+    }
+
+    .repeat-mission-row td {
+        display: block;
+        padding: 6px 0;
+    }
+
+    .repeat-mission-row td:first-child::before {
+        content: "Mission:";
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--gray-600);
+        margin-bottom: 4px;
+    }
+
+    .repeat-mission-row td:nth-child(2)::before {
+        content: "Comment:";
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--gray-600);
+        margin-bottom: 4px;
+    }
+
+    .repeat-mission-actions {
+        text-align: right;
+        padding-top: 8px;
+        border-top: 1px solid rgba(10, 186, 239, 0.1);
+        margin-top: 8px;
     }
 }
