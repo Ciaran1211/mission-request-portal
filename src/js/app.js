@@ -10,9 +10,9 @@
     // ============================================================
     // Get these from your EmailJS dashboard: https://www.emailjs.com/
     const EMAILJS_CONFIG = {
-        publicKey: 'AuUzrhV2H93CJxoa0',      // Account â†’ API Keys â†’ Public Key
-        serviceId: 'service_4j8dixs',       // Email Services â†’ Service ID
-        templateId: 'template_152awpf'      // Email Templates â†’ Template ID
+        publicKey: 'YOUR_PUBLIC_KEY',      // Account → API Keys → Public Key
+        serviceId: 'YOUR_SERVICE_ID',       // Email Services → Service ID
+        templateId: 'YOUR_TEMPLATE_ID'      // Email Templates → Template ID
     };
 
     // ============================================================
@@ -23,33 +23,17 @@
             name: 'BMA',
             displayName: 'BHP Mitsubishi Alliance',
             sites: {
-                'SR': {
+                'saraji': {
                     name: 'Saraji',
-                    areas: ["6E", "6W", "4E", "4W", "2E", "2W", "1E", "1W", "13E", "15W", "15E", "14W", "14E", "13W", "8W", "8E", "12W", "12E", "9W", "9E", "16W", "16E"],
-                    repeatMissions: [
-                        { display: "Daily Panos", sharepoint: "251219 P SR PIT Daily Panos 1" },
-                        { display: "Daily Panos 2", sharepoint: "251219 P SR PIT Daily Panos 2" },
-                        { display: "Daily Panos 3", sharepoint: "251219 P SR PIT Daily Panos 3" },
-                        { display: "PIT Coal 8", sharepoint: "251219 S SR PIT Coal 8" },
-                        { display: "PIT Coal 9", sharepoint: "251219 S SR PIT Coal 9" },
-                        { display: "PIT Coal 12", sharepoint: "251219 S SR PIT Coal 12" },
-                        { display: "PIT Coal 13-14", sharepoint: "251219 S SR PIT Coal 13-14" },
-                        { display: "PIT Coal 15", sharepoint: "251219 S SR PIT Coal 15" },
-                        { display: "PIT Coal 16", sharepoint: "251219 S SR PIT Coal 16" },
-                        { display: "PIT Coal 1A", sharepoint: "251219 S SR PIT Coal 1A" },
-                        { display: "PIT Coal 2-4", sharepoint: "251219 S SR PIT Coal 2-4" },
-                        { display: "PIT Coal 6", sharepoint: "251219 S SR PIT Coal 6" }
-                    ]
+                    areas: ['6W', '8W', '10W', '12W', 'Saraji East', 'Processing Plant', 'Stockpile Area']
                 },
-                'GR': {
+                'goonyella': {
                     name: 'Goonyella',
-                    areas: ['North Pit', 'South Pit', 'East Pit', 'CHPP', 'Rail Loop'],
-                    repeatMissions: []
+                    areas: ['North Pit', 'South Pit', 'East Pit', 'CHPP', 'Rail Loop']
                 },
-                'PK': {
+                'peak-downs': {
                     name: 'Peak Downs',
-                    areas: ["3N_E", "3N_W", "5N_E", "5N_W", "6N_E", "7N_E", "6N_W", "7N_W", "1S_E", "1S_W", "2S_E", "2S_W", "1N_W", "1N_E", "4S_E", "4S_W", "2N_W", "2N_E", "5S_E", "5S_W", "9S_E", "11S_E", "9S_W", "11S_W"],
-                    repeatMissions: []
+                    areas: ['Main Pit', 'Extension', 'Haul Road', 'Processing']
                 }
             }
         },
@@ -57,21 +41,55 @@
             name: 'Goldfields',
             displayName: 'Goldfields',
             sites: {
-                'GY': {
-                    name: 'Gruyere',
-                    areas: ["Pit", "ROM", "TSF", "WD 01", "WD 02-03", "WD 04-05", "WD 06", "Plant / MACA", "Solar Farm", "NE Outer", "SE Outer", "SW Outer", "Multiple Locations"],
-                    repeatMissions: []
+                'st-ives': {
+                    name: 'St Ives',
+                    areas: ['Invincible', 'Hamlet', 'Neptune', 'Athena', 'Processing']
                 },
+                'gruyere': {
+                    name: 'Gruyere',
+                    areas: ['Open Pit', 'Stage 1', 'Stage 2', 'Processing Plant', 'TSF']
+                },
+                'agnew': {
+                    name: 'Agnew',
+                    areas: ['Kim Pit', 'Waroonga', 'Mill', 'Tailings']
+                }
+            }
+        },
+        'RioTinto': {
+            name: 'RioTinto',
+            displayName: 'Rio Tinto',
+            sites: {
+                'tom-price': {
+                    name: 'Tom Price',
+                    areas: ['North Deposit', 'South Deposit', 'Section 7', 'Processing', 'Rail']
+                },
+                'paraburdoo': {
+                    name: 'Paraburdoo',
+                    areas: ['Eastern Range', '4 East', 'Channar', 'Processing']
+                }
+            }
+        },
+        'FMG': {
+            name: 'FMG',
+            displayName: 'Fortescue Metals Group',
+            sites: {
+                'christmas-creek': {
+                    name: 'Christmas Creek',
+                    areas: ['Cloudbreak West', 'Eastern Hub', 'Central', 'Processing', 'Rail']
+                },
+                'solomon': {
+                    name: 'Solomon',
+                    areas: ['Kings Valley', 'Firetail', 'Queens Valley', 'Infrastructure']
+                }
             }
         },
         'Norton': {
             name: 'Norton',
             displayName: 'Norton Gold Fields',
             sites: {
-                'BN': {
+                'binduli-north': {
                     name: 'Binduli North',
-                    areas: ["Janet Ivy Pit", "Karen Louise Pit", "North Waste Rock Dump", "East Waste Rock Dump", "ROM", "ROM 2", "Heap Leach", "Offices", "Treatment Plant", "Fort William", "Site Access", "Multiple Locations"],
-                    repeatMissions: []
+                    areas: ['Main Pit', 'North Extension', 'ROM Pad', 'Haul Road']
                 }
             }
         }
@@ -85,8 +103,6 @@
     let currentKmlData = '';
     let uploadedFiles = [];
     let isSubmitting = false;
-    let requestType = 'single'; // 'single' or 'repeat'
-    let repeatMissionRows = []; // Array of {mission: '', comment: ''}
 
     // ============================================================
     // IFRAME COMMUNICATION
@@ -148,46 +164,6 @@
         setupEventListeners();
         setupMapWidgetListener();
         setDefaultDate();
-
-        // Priority tooltip functionality
-        const priorityHelpButton = document.getElementById('priorityHelpButton');
-        const priorityTooltip = document.getElementById('priorityTooltip');
-
-        if (priorityHelpButton && priorityTooltip) {
-            // Toggle tooltip on button click
-            priorityHelpButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                priorityTooltip.classList.toggle('show');
-            });
-
-            // Close tooltip when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!priorityHelpButton.contains(e.target) && !priorityTooltip.contains(e.target)) {
-                    priorityTooltip.classList.remove('show');
-                }
-            });
-
-            // Close tooltip on escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    priorityTooltip.classList.remove('show');
-                }
-            });
-        }
-
-        // Optional: Show tooltip automatically when Priority 2 is selected
-        const missionPrioritySelect = document.getElementById('missionPriority');
-        missionPrioritySelect.addEventListener('change', function() {
-            if (this.value === '2' && priorityTooltip) {
-                // Show tooltip to remind about time requirement
-                priorityTooltip.classList.add('show');
-
-                // Auto-hide after 8 seconds
-                setTimeout(() => {
-                    priorityTooltip.classList.remove('show');
-                }, 8000);
-            }
-        });
     }
 
     function showInvalidCompany() {
@@ -227,199 +203,6 @@
     }
 
     // ============================================================
-    // REQUEST TYPE HANDLING
-    // ============================================================
-    function handleRequestTypeChange(type) {
-        console.log('Request type changed to:', type);
-        requestType = type;
-
-        const singleRequestSections = document.getElementById('singleRequestSections');
-        const repeatMissionSection = document.getElementById('repeatMissionSection');
-        const singleContactSection = document.getElementById('singleContactSection');
-        const singleAttachmentsSection = document.getElementById('singleAttachmentsSection');
-
-        console.log('Found elements:', {
-            singleRequestSections: !!singleRequestSections,
-            repeatMissionSection: !!repeatMissionSection,
-            singleContactSection: !!singleContactSection,
-            singleAttachmentsSection: !!singleAttachmentsSection
-        });
-
-        if (type === 'single') {
-            // Show single request sections
-            if (singleRequestSections) {
-                singleRequestSections.style.display = 'block';
-                singleRequestSections.classList.remove('hidden-section');
-            }
-            if (repeatMissionSection) {
-                repeatMissionSection.style.display = 'none';
-                repeatMissionSection.classList.add('hidden-section');
-            }
-            if (singleContactSection) {
-                singleContactSection.style.display = 'block';
-                singleContactSection.classList.remove('hidden-section');
-            }
-            if (singleAttachmentsSection) {
-                singleAttachmentsSection.style.display = 'block';
-                singleAttachmentsSection.classList.remove('hidden-section');
-            }
-
-            // Re-enable required fields for single request
-            const siteArea = document.getElementById('siteArea');
-            const missionName = document.getElementById('missionName');
-            const missionType = document.getElementById('missionType');
-            const missionPriority = document.getElementById('missionPriority');
-            const submitterName = document.getElementById('submitterName');
-            const submitterEmail = document.getElementById('submitterEmail');
-
-            if (siteArea) siteArea.required = true;
-            if (missionName) missionName.required = true;
-            if (missionType) missionType.required = true;
-            if (missionPriority) missionPriority.required = true;
-            if (submitterName) submitterName.required = true;
-            if (submitterEmail) submitterEmail.required = true;
-        } else {
-            // Show repeat mission section
-            if (singleRequestSections) {
-                singleRequestSections.style.display = 'none';
-                singleRequestSections.classList.add('hidden-section');
-            }
-            if (repeatMissionSection) {
-                repeatMissionSection.style.display = 'block';
-                repeatMissionSection.classList.remove('hidden-section');
-            }
-            if (singleContactSection) {
-                singleContactSection.style.display = 'none';
-                singleContactSection.classList.add('hidden-section');
-            }
-            if (singleAttachmentsSection) {
-                singleAttachmentsSection.style.display = 'none';
-                singleAttachmentsSection.classList.add('hidden-section');
-            }
-
-            // Disable required fields for single request
-            const siteArea = document.getElementById('siteArea');
-            const missionName = document.getElementById('missionName');
-            const missionType = document.getElementById('missionType');
-            const missionPriority = document.getElementById('missionPriority');
-            const submitterName = document.getElementById('submitterName');
-            const submitterEmail = document.getElementById('submitterEmail');
-
-            if (siteArea) siteArea.required = false;
-            if (missionName) missionName.required = false;
-            if (missionType) missionType.required = false;
-            if (missionPriority) missionPriority.required = false;
-            if (submitterName) submitterName.required = false;
-            if (submitterEmail) submitterEmail.required = false;
-
-            // Initialize with one empty row if none exist
-            if (repeatMissionRows.length === 0) {
-                addRepeatMissionRow();
-            }
-        }
-
-        console.log('Toggle complete for type:', type);
-    }
-
-    function getRepeatMissionsForSite(siteKey) {
-        if (!currentCompany || !currentCompany.sites[siteKey]) {
-            return [];
-        }
-        return currentCompany.sites[siteKey].repeatMissions || [];
-    }
-
-    function addRepeatMissionRow() {
-        const siteKey = document.getElementById('siteSelection').value;
-        const missions = getRepeatMissionsForSite(siteKey);
-
-        // Store full mission object, not just sharepoint name
-        repeatMissionRows.push({ mission: null, comment: '' });
-        renderRepeatMissionsTable();
-    }
-
-    function removeRepeatMissionRow(index) {
-        if (repeatMissionRows.length > 1) {
-            repeatMissionRows.splice(index, 1);
-            renderRepeatMissionsTable();
-        }
-    }
-
-    function updateRepeatMissionRow(index, field, value) {
-        if (repeatMissionRows[index]) {
-            repeatMissionRows[index][field] = value;
-        }
-    }
-
-    function renderRepeatMissionsTable() {
-        const container = document.getElementById('repeatMissionsTableBody');
-        const siteKey = document.getElementById('siteSelection').value;
-        const missions = getRepeatMissionsForSite(siteKey);
-
-        container.innerHTML = '';
-
-        repeatMissionRows.forEach((row, index) => {
-            const tr = document.createElement('tr');
-            tr.className = 'repeat-mission-row';
-
-            // Mission dropdown cell
-            const missionCell = document.createElement('td');
-            const missionSelect = document.createElement('select');
-            missionSelect.className = 'repeat-mission-select';
-            missionSelect.innerHTML = '<option value="">Select mission...</option>';
-
-            missions.forEach(mission => {
-                const option = document.createElement('option');
-                // Store full mission object as JSON string
-                option.value = JSON.stringify(mission);
-                option.textContent = mission.display; // Show display name
-                // Check if this is the selected mission
-                if (row.mission && row.mission.sharepoint === mission.sharepoint) {
-                    option.selected = true;
-                }
-                missionSelect.appendChild(option);
-            });
-
-            missionSelect.addEventListener('change', (e) => {
-                // Parse JSON to get full mission object
-                const selectedMission = e.target.value ? JSON.parse(e.target.value) : null;
-                updateRepeatMissionRow(index, 'mission', selectedMission);
-            });
-            missionCell.appendChild(missionSelect);
-
-            // Comment cell
-            const commentCell = document.createElement('td');
-            const commentInput = document.createElement('input');
-            commentInput.type = 'text';
-            commentInput.className = 'repeat-mission-comment';
-            commentInput.placeholder = 'KML Reference / Comment';
-            commentInput.value = row.comment || '';
-            commentInput.addEventListener('input', (e) => {
-                updateRepeatMissionRow(index, 'comment', e.target.value);
-            });
-            commentCell.appendChild(commentInput);
-
-            // Actions cell
-            const actionsCell = document.createElement('td');
-            actionsCell.className = 'repeat-mission-actions';
-
-            if (repeatMissionRows.length > 1) {
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'remove-row-btn';
-                removeBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
-                removeBtn.title = 'Remove row';
-                removeBtn.addEventListener('click', () => removeRepeatMissionRow(index));
-                actionsCell.appendChild(removeBtn);
-            }
-
-            tr.appendChild(missionCell);
-            tr.appendChild(commentCell);
-            tr.appendChild(actionsCell);
-            container.appendChild(tr);
-        });
-    }
-
-    // ============================================================
     // EVENT LISTENERS
     // ============================================================
     function setupEventListeners() {
@@ -433,19 +216,6 @@
             radio.addEventListener('change', handleFrequencyChange);
         });
 
-        // Request type toggle
-        document.querySelectorAll('input[name="requestType"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                handleRequestTypeChange(e.target.value);
-            });
-        });
-
-        // Add repeat mission row button
-        const addRowBtn = document.getElementById('addRepeatMissionRow');
-        if (addRowBtn) {
-            addRowBtn.addEventListener('click', addRepeatMissionRow);
-        }
-
         setupFileUpload();
         document.getElementById('missionForm').addEventListener('submit', handleSubmit);
     }
@@ -457,35 +227,6 @@
         if (siteKey) {
             currentSite = currentCompany.sites[siteKey];
             sendToMapWidget('changeSite', { site: siteKey });
-
-            // Check if site has repeat missions and update UI
-            const missions = getRepeatMissionsForSite(siteKey);
-            const repeatOption = document.getElementById('repeatMission');
-
-            if (repeatOption) {
-                // Disable repeat option if no repeat missions available
-                if (missions.length === 0) {
-                    repeatOption.disabled = true;
-                    repeatOption.parentElement.style.opacity = '0.5';
-                    repeatOption.parentElement.title = 'No repeat missions configured for this site';
-
-                    // If currently on repeat mode, switch to single
-                    if (requestType === 'repeat') {
-                        document.getElementById('singleRequest').checked = true;
-                        handleRequestTypeChange('single');
-                    }
-                } else {
-                    repeatOption.disabled = false;
-                    repeatOption.parentElement.style.opacity = '1';
-                    repeatOption.parentElement.title = '';
-                }
-            }
-
-            // Clear and refresh repeat mission rows when site changes
-            repeatMissionRows = [];
-            if (requestType === 'repeat') {
-                addRepeatMissionRow();
-            }
         }
     }
 
@@ -504,83 +245,41 @@
 
     function setDefaultDate() {
         const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
-
-        // Set date for single request mode
-        const missionDate = document.getElementById('missionDate');
-        if (missionDate) {
-            missionDate.value = todayStr;
-            missionDate.min = todayStr;
-        }
-
-        // Set date for repeat mission mode
-        const repeatMissionDate = document.getElementById('repeatMissionDate');
-        if (repeatMissionDate) {
-            repeatMissionDate.value = todayStr;
-            repeatMissionDate.min = todayStr;
-        }
+        today.setDate(today.getDate() + 1);
+        document.getElementById('missionDate').value = today.toISOString().split('T')[0];
+        document.getElementById('missionDate').min = new Date().toISOString().split('T')[0];
     }
 
     // ============================================================
     // FILE UPLOAD
     // ============================================================
     function setupFileUpload() {
-        // Single request file upload
         const uploadArea = document.getElementById('fileUploadArea');
         const fileInput = document.getElementById('fileInput');
 
-        if (uploadArea && fileInput) {
-            uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('click', () => fileInput.click());
 
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('drag-over');
-            });
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
 
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('drag-over');
-            });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
 
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('drag-over');
-                handleFiles(e.dataTransfer.files);
-            });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
 
-            fileInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files);
-            });
-        }
-
-        // Repeat mission file upload
-        const repeatUploadArea = document.getElementById('repeatFileUploadArea');
-        const repeatFileInput = document.getElementById('repeatFileInput');
-
-        if (repeatUploadArea && repeatFileInput) {
-            repeatUploadArea.addEventListener('click', () => repeatFileInput.click());
-
-            repeatUploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                repeatUploadArea.classList.add('drag-over');
-            });
-
-            repeatUploadArea.addEventListener('dragleave', () => {
-                repeatUploadArea.classList.remove('drag-over');
-            });
-
-            repeatUploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                repeatUploadArea.classList.remove('drag-over');
-                handleFiles(e.dataTransfer.files, 'repeat');
-            });
-
-            repeatFileInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files, 'repeat');
-            });
-        }
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
     }
 
-    function handleFiles(files, mode = 'single') {
+    function handleFiles(files) {
         Array.from(files).forEach(file => {
             if (uploadedFiles.some(f => f.name === file.name)) return;
             if (file.size > 25 * 1024 * 1024) {
@@ -588,43 +287,35 @@
                 return;
             }
             uploadedFiles.push(file);
-            renderFileList(mode);
+            renderFileList();
         });
     }
 
-    function renderFileList(mode = 'single') {
-        // Render to both file lists since they share the same uploadedFiles array
-        const fileLists = ['fileList', 'repeatFileList'];
+    function renderFileList() {
+        const fileList = document.getElementById('fileList');
+        fileList.innerHTML = '';
 
-        fileLists.forEach(listId => {
-            const fileList = document.getElementById(listId);
-            if (!fileList) return;
-
-            fileList.innerHTML = '';
-
-            uploadedFiles.forEach((file, index) => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                item.innerHTML = `
-                    <div class="file-item-info">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
-                        </svg>
-                        <span class="file-item-name">${file.name}</span>
-                        <span class="file-item-size">${formatFileSize(file.size)}</span>
-                    </div>
-                    <button type="button" class="file-item-remove" data-index="${index}">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 6L6 18M6 6l12 12"/>
-                        </svg>
-                    </button>
-                `;
-                fileList.appendChild(item);
-            });
+        uploadedFiles.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            item.innerHTML = `
+                <div class="file-item-info">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                    </svg>
+                    <span class="file-item-name">${file.name}</span>
+                    <span class="file-item-size">${formatFileSize(file.size)}</span>
+                </div>
+                <button type="button" class="file-item-remove" data-index="${index}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            fileList.appendChild(item);
         });
 
-        // Setup remove handlers
         document.querySelectorAll('.file-item-remove').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = parseInt(e.currentTarget.dataset.index);
@@ -678,9 +369,6 @@
         submitBtn.disabled = true;
 
         try {
-            // Validate form first
-            validateForm();
-
             const formData = collectFormData();
             const refId = await sendViaEmailJS(formData);
 
@@ -699,371 +387,104 @@
         }
     }
 
-    // Form validation function
-    function validateForm() {
+    function collectFormData() {
         const form = document.getElementById('missionForm');
+        const frequencyType = document.querySelector('input[name="frequencyType"]:checked').value;
+        const isRepeating = frequencyType === 'Repeating';
+        const dateFormatted = formatDateYYMMDD(form.missionDate.value);
+        const siteName = currentSite ? currentSite.name : form.siteSelection.value;
 
-        // For repeat missions, only validate essential fields
-        if (requestType === 'repeat') {
-            // Check site selection
-            if (!document.getElementById('siteSelection').value) {
-                throw new Error('Please select a site');
-            }
-
-            // Check at least one mission is selected (mission is now an object)
-            const validMissions = repeatMissionRows.filter(row => row.mission && row.mission.sharepoint);
-            if (validMissions.length === 0) {
-                throw new Error('Please select at least one repeat mission');
-            }
-
-            // Check date (using repeat-specific field)
-            const repeatDate = document.getElementById('repeatMissionDate');
-            if (!repeatDate || !repeatDate.value) {
-                throw new Error('Please select a mission date');
-            }
-
-            const selectedDate = new Date(repeatDate.value);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (selectedDate < today) {
-                throw new Error('Scheduled date cannot be in the past');
-            }
-
-            // Check priority
-            const repeatPriority = document.getElementById('repeatMissionPriority');
-            if (!repeatPriority || !repeatPriority.value) {
-                throw new Error('Please select a mission priority');
-            }
-
-            // Check contact info (using repeat-specific fields)
-            const repeatName = document.getElementById('repeatSubmitterName');
-            const repeatEmail = document.getElementById('repeatSubmitterEmail');
-
-            if (!repeatName || !repeatName.value) {
-                throw new Error('Your name is required');
-            }
-            if (!repeatEmail || !repeatEmail.value) {
-                throw new Error('Email is required');
-            }
-
-            return;
-        }
-
-        // Basic HTML5 validation for single request
-        if (!form.checkValidity()) {
-            const invalidField = form.querySelector(':invalid');
-            if (invalidField) {
-                invalidField.focus();
-                invalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-            throw new Error('Please fill in all required fields correctly.');
-        }
-
-        // Additional custom validation
-        const missionDate = document.getElementById('missionDate').value;
-        const selectedDate = new Date(missionDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (selectedDate < today) {
-            document.getElementById('missionDate').focus();
-            throw new Error('Scheduled date cannot be in the past');
-        }
-
-        // Validate custom parameters if enabled
-        if (document.getElementById('customParams').checked) {
-            const resolution = document.getElementById('imageResolution').value;
-            if (resolution && (resolution < 0.5 || resolution > 20)) {
-                document.getElementById('imageResolution').focus();
-                throw new Error('Image Resolution must be between 0.5 and 20 cm/px');
-            }
-
-            const height = document.getElementById('missionHeight').value;
-            if (height && (height < 30 || height > 400)) {
-                document.getElementById('missionHeight').focus();
-                throw new Error('Mission Height must be between 30 and 400 meters');
-            }
-
-            const forwardOverlap = document.getElementById('overlapForward').value;
-            if (forwardOverlap && (forwardOverlap < 50 || forwardOverlap > 95)) {
-                document.getElementById('overlapForward').focus();
-                throw new Error('Forward Overlap must be between 50% and 95%');
-            }
-
-            const sideOverlap = document.getElementById('overlapSide').value;
-            if (sideOverlap && (sideOverlap < 50 || sideOverlap > 95)) {
-                document.getElementById('overlapSide').focus();
-                throw new Error('Side Overlap must be between 50% and 95%');
-            }
-        }
-
-        // Validate file sizes
-        uploadedFiles.forEach(file => {
-            if (file.size > 25 * 1024 * 1024) {
-                throw new Error(`File "${file.name}" is too large. Maximum size is 25MB.`);
-            }
-        });
-    }
-
-    // Update the collectFormData function to match the schema
-function collectFormData() {
-    const form = document.getElementById('missionForm');
-    const dateFormatted = formatDateYYMMDD(form.missionDate.value);
-    const siteName = currentSite ? currentSite.name : form.siteSelection.value;
-    const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
-
-    // Helper to safely get form field value
-    const getFieldValue = (fieldName, defaultValue = '') => {
-        const field = form.elements[fieldName];
-        return field ? field.value : defaultValue;
-    };
-
-    // Handle Repeat Mission request type
-    if (requestType === 'repeat') {
-        // Filter out empty rows (mission is now an object, not a string)
-        const validMissions = repeatMissionRows.filter(row => row.mission && row.mission.sharepoint);
-
-        if (validMissions.length === 0) {
-            throw new Error('Please select at least one repeat mission');
-        }
-
-        // Use repeat-specific field IDs
-        const repeatDate = document.getElementById('repeatMissionDate');
-        const repeatPriority = document.getElementById('repeatMissionPriority');
-        const repeatName = document.getElementById('repeatSubmitterName');
-        const repeatEmail = document.getElementById('repeatSubmitterEmail');
-        const repeatPhone = document.getElementById('repeatContactNumber');
-
-        const data = {
-            RequestType: 'Repeat Mission',
-            ScheduledDate: repeatDate ? repeatDate.value : '',
-            Priority: repeatPriority ? parseInt(repeatPriority.value) || 3 : 3,
-            Company: currentCompany.name,
-            Site: siteName,
-            SiteKey: getFieldValue('siteSelection'),
-            RequestedBy: repeatName ? repeatName.value : '',
-            EmailContact: repeatEmail ? repeatEmail.value : '',
-            PhContact: repeatPhone ? repeatPhone.value : '',
-            Attachment: hasAttachments ? 'Yes' : 'No',
-            AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
-            SubmittedAt: new Date().toISOString(),
-
-            // Repeat missions array with full SharePoint field data
-            // SiteOrder is based on position in the list (1-indexed)
-            RepeatMissions: validMissions.map((row, index) => ({
-                Title: row.mission.sharepoint,           // SharePoint Title field
-                MissionName: row.mission.sharepoint,     // SharePoint name for lookup
-                DisplayName: row.mission.display,        // Human-readable name
-                Comment: row.comment || '',              // User comment/KML reference
-                SiteOrder: index + 1,                    // Position in order (1, 2, 3...)
-                Dock: row.mission.dock || '',            // Dock location from config
-                PlannedFlightTime: row.mission.plannedFlightTime || null  // Flight time in minutes
-            })),
-
-            // Summary for title
-            Title: `${dateFormatted} ${getFieldValue('siteSelection')} Repeat Missions (${validMissions.length})`.trim()
+        // Priority mapping
+        const priorityMap = {
+            '1': '1 - Critical',
+            '2': '2 - High',
+            '3': '3 - Medium',
+            '4': '4 - Low',
+            '5': '5 - Flexible'
         };
 
-        // Validate repeat mission data
-        validateRepeatFormData(data);
+        // Frequency value
+        let frequency = 'Once';
+        if (isRepeating && form.repeatFrequency.value) {
+            frequency = form.repeatFrequency.value;
+        }
+
+        const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
+
+        // Build SharePoint-ready data object
+        // Note: Email is stored with [at] to prevent HTML auto-linking, Power Automate will fix it
+        const data = {
+            // === SHAREPOINT FIELDS ===
+            Title: `${dateFormatted} ${currentCompany.name} ${siteName} ${form.siteArea.value} ${form.missionName.value}`.trim(),
+            ScheduledDate: form.missionDate.value,
+            Company: currentCompany.name,
+            Site: siteName,
+            Priority: priorityMap[form.missionPriority.value] || '3 - Medium',
+            MissionType: form.missionType.value,
+            Frequency: frequency,
+            MissionPlan: 'New Request',
+            JobStatus: 'Incomplete',
+            Comments: form.missionName.value,
+            CustomerComments: form.customerComment.value || '',
+            RequestedBy: form.submitterName.value,
+            EmailContact: form.submitterEmail.value,
+            PhContact: form.contactNumber.value || '',
+            Attachment: hasAttachments,
+            CustomerParameters: form.customParams.checked ? 'Yes' : 'No',
+
+            // Custom parameters (only if enabled)
+            Resolution: form.customParams.checked && form.imageResolution.value ? parseFloat(form.imageResolution.value) : null,
+            HeightAGL: form.customParams.checked && form.missionHeight.value ? parseFloat(form.missionHeight.value) : null,
+            SideOverlap: form.customParams.checked && form.overlapSide.value ? parseFloat(form.overlapSide.value) : null,
+            ForwardOverlap: form.customParams.checked && form.overlapForward.value ? parseFloat(form.overlapForward.value) : null,
+            TerrainFollow: form.customParams.checked ? (form.terrainFollowing.value || null) : null,
+            ElevOpt: form.customParams.checked ? (form.elevationOptimisation.value || null) : null,
+
+            // === METADATA (for reference, not direct SP fields) ===
+            SiteArea: form.siteArea.value,
+            SiteKey: form.siteSelection.value,
+            SubmittedAt: new Date().toISOString(),
+
+            // File names only (files can't be sent via email easily)
+            AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
+            HasKML: currentKmlData ? 'Yes' : 'No'
+        };
+
+        // Remove null values for cleaner JSON
+        Object.keys(data).forEach(key => {
+            if (data[key] === null || data[key] === undefined) {
+                delete data[key];
+            }
+        });
 
         return data;
     }
-
-    // Handle Single Request type (original logic)
-    const frequencyType = document.querySelector('input[name="frequencyType"]:checked');
-    const isRepeating = frequencyType && frequencyType.value === 'Repeating';
-
-    let frequency = 'Once';
-    if (isRepeating && form.repeatFrequency && form.repeatFrequency.value) {
-        frequency = form.repeatFrequency.value;
-    }
-
-    const missionTypeVal = (form.missionType.value || '').trim();
-
-    // Normalize SharePoint-friendly mission type
-    const missionTypeForForm = (() => {
-      const map = {
-        'Survey - Nadir (standard mapping survey)': 'Survey',
-        'Survey - Oblique (e.g. pit wall models)': 'Survey',
-        'Panoramic (360-deg imagery)': 'Panoramic',
-        'Inspection imagery': 'Inspection',
-        'Video recording': 'Video',
-        'Video livestream': 'Livestream',
-        'Other': 'Other'
-      };
-      return map[missionTypeVal] || missionTypeVal || 'Other';
-    })();
-
-    // Build SharePoint-ready data object matching the schema
-    const data = {
-        // === SHAREPOINT FIELDS ===
-        RequestType: 'Single Request',
-        Title: `${dateFormatted} ${getFieldValue('siteSelection')} ${getFieldValue('siteArea')} ${getFieldValue('missionName')}`.trim(),
-        ScheduledDate: getFieldValue('missionDate'),
-        Company: currentCompany.name,
-        Site: siteName,
-        Priority: parseInt(getFieldValue('missionPriority')) || 3, // Integer 1-5
-        MissionType: missionTypeForForm,
-        Frequency: frequency,
-        MissionPlan: 'New Request',
-        JobStatus: 'Incomplete',
-        Comments: getFieldValue('missionName'),
-        CustomerComments: getFieldValue('customerComment'),
-        RequestedBy: getFieldValue('submitterName'),
-        EmailContact: getFieldValue('submitterEmail'),
-        PhContact: getFieldValue('contactNumber'),
-        Attachment: hasAttachments ? 'Yes' : 'No',
-        CustomerParameters: form.customParams && form.customParams.checked ? 'Yes' : 'No',
-
-        // Custom parameters (only if enabled)
-        Resolution: form.customParams && form.customParams.checked && getFieldValue('imageResolution') ? parseFloat(getFieldValue('imageResolution')) : null,
-        HeightAGL: form.customParams && form.customParams.checked && getFieldValue('missionHeight') ? parseInt(getFieldValue('missionHeight')) : null,
-        SideOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapSide') ? parseInt(getFieldValue('overlapSide')) : null,
-        ForwardOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapForward') ? parseInt(getFieldValue('overlapForward')) : null,
-        TerrainFollow: form.customParams && form.customParams.checked ? getFieldValue('terrainFollowing') : '',
-        ElevOpt: form.customParams && form.customParams.checked ? getFieldValue('elevationOptimisation') : '',
-
-        // === METADATA ===
-        SiteArea: getFieldValue('siteArea'),
-        SiteKey: getFieldValue('siteSelection'),
-        SubmittedAt: new Date().toISOString(),
-
-        // File names only
-        AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
-        HasKML: currentKmlData ? 'Yes' : 'No'
-    };
-
-    // Validate data types according to schema
-    validateFormData(data);
-
-    // Remove null values for cleaner JSON
-    Object.keys(data).forEach(key => {
-        if (data[key] === null || data[key] === undefined || data[key] === '') {
-            delete data[key];
-        }
-    });
-
-    return data;
-}
-
-// Validation for repeat mission form
-function validateRepeatFormData(data) {
-    if (!data.ScheduledDate) {
-        throw new Error('Scheduled date is required');
-    }
-    if (!data.RequestedBy) {
-        throw new Error('Your name is required');
-    }
-    if (!data.EmailContact) {
-        throw new Error('Email is required');
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.EmailContact)) {
-        throw new Error('Please enter a valid email address');
-    }
-
-    const selectedDate = new Date(data.ScheduledDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) {
-        throw new Error('Scheduled date cannot be in the past');
-    }
-
-    return true;
-}
-
-// Add validation function
-function validateFormData(data) {
-    // Validate required fields
-    const requiredFields = ['Title', 'ScheduledDate', 'Company', 'Site', 'Priority', 'MissionType', 'RequestedBy', 'EmailContact'];
-    requiredFields.forEach(field => {
-        if (!data[field]) {
-            throw new Error(`${field} is required`);
-        }
-    });
-
-    // Validate data types
-    if (data.Priority && (data.Priority < 1 || data.Priority > 5)) {
-        throw new Error('Priority must be between 1 and 5');
-    }
-
-    if (data['Site Order'] && !Number.isInteger(data['Site Order'])) {
-        throw new Error('Site Order must be an integer');
-    }
-
-    if (data.PlannedFlightTime && typeof data.PlannedFlightTime !== 'number') {
-        throw new Error('Planned Flight Time must be a number');
-    }
-
-    if (data.Resolution && typeof data.Resolution !== 'number') {
-        throw new Error('Resolution must be a number');
-    }
-
-    if (data.HeightAGL && !Number.isInteger(data.HeightAGL)) {
-        throw new Error('Height AGL must be an integer');
-    }
-
-    if (data.SideOverlap && !Number.isInteger(data.SideOverlap)) {
-        throw new Error('Side Overlap must be an integer');
-    }
-
-    if (data.ForwardOverlap && !Number.isInteger(data.ForwardOverlap)) {
-        throw new Error('Forward Overlap must be an integer');
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (data.EmailContact && !emailRegex.test(data.EmailContact)) {
-        throw new Error('Please enter a valid email address');
-    }
-
-    // Validate date is not in the past
-    const selectedDate = new Date(data.ScheduledDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) {
-        throw new Error('Scheduled date cannot be in the past');
-    }
-
-    return true;
-}
 
     async function sendViaEmailJS(formData) {
         const refId = `MR-${Date.now().toString(36).toUpperCase()}`;
 
         // Create clean JSON for Power Automate parsing
+        // Note: EmailJS may convert to HTML, so Power Automate needs to clean it
         const jsonData = JSON.stringify(formData, null, 2);
 
-        // Build template params based on request type
-        let templateParams = {
+        const templateParams = {
             title: formData.Title,
             ref_id: refId,
             json_data: jsonData,
             submitted_at: new Date().toLocaleString('en-AU', { timeZone: 'Australia/Perth' }),
+
+            // Key fields for quick viewing (plain text, no links)
             company: formData.Company,
             site: formData.Site,
+            site_area: formData.SiteArea,
+            mission_name: formData.Comments,
+            mission_type: formData.MissionType,
             scheduled_date: formData.ScheduledDate,
+            priority: formData.Priority,
             requested_by: formData.RequestedBy,
-            email: formData.EmailContact,
-            phone: formData.PhContact || 'Not provided',
-            request_type: formData.RequestType || 'Single Request'
+            email_contact: formData.EmailContact.replace('@', ' [at] '), // Prevent auto-linking
+            phone: formData.PhContact || 'Not provided'
         };
-
-        // Add type-specific fields
-        if (formData.RequestType === 'Repeat Mission') {
-            templateParams.site_area = 'N/A';
-            templateParams.mission_name = `${formData.RepeatMissions.length} repeat mission(s)`;
-            templateParams.mission_type = 'Repeat';
-            templateParams.priority = formData.Priority;
-            templateParams.repeat_missions = formData.RepeatMissions.map(m => m.DisplayName).join(', ');
-        } else {
-            templateParams.site_area = formData.SiteArea;
-            templateParams.mission_name = formData.Comments;
-            templateParams.mission_type = formData.MissionType;
-            templateParams.priority = formData.Priority;
-        }
 
         const response = await emailjs.send(
             EMAILJS_CONFIG.serviceId,
