@@ -172,7 +172,7 @@
             const repeatPriority = document.getElementById('repeatMissionPriority');
             const repeatName = document.getElementById('repeatSubmitterName');
             const repeatEmail = document.getElementById('repeatSubmitterEmail');
-
+            
             if (repeatDate) repeatDate.required = false;
             if (repeatPriority) repeatPriority.required = false;
             if (repeatName) repeatName.required = false;
@@ -219,7 +219,7 @@
             const repeatPriority = document.getElementById('repeatMissionPriority');
             const repeatName = document.getElementById('repeatSubmitterName');
             const repeatEmail = document.getElementById('repeatSubmitterEmail');
-
+            
             if (repeatDate) repeatDate.required = true;
             if (repeatPriority) repeatPriority.required = true;
             if (repeatName) repeatName.required = true;
@@ -442,7 +442,7 @@
     // ============================================================
     // FILE UPLOAD WITH BASE64 ENCODING
     // ============================================================
-
+    
     /**
      * Convert a File object to base64 string
      * @param {File} file - File to convert
@@ -527,17 +527,17 @@
                 console.log(`File ${file.name} already added`);
                 continue;
             }
-
+            
             // Check file size - set limit to 5MB for base64 encoding
             if (file.size > 5 * 1024 * 1024) {
                 alert(`File "${file.name}" is too large. Maximum size is 5MB per file.`);
                 continue;
             }
-
+            
             try {
                 // Convert to base64 for transmission
                 const base64Content = await fileToBase64(file);
-
+                
                 uploadedFiles.push({
                     name: file.name,
                     size: file.size,
@@ -545,7 +545,7 @@
                     base64: base64Content,
                     originalFile: file  // Keep reference for display purposes
                 });
-
+                
                 console.log(`File ${file.name} encoded successfully (${formatFileSize(file.size)})`);
             } catch (error) {
                 console.error(`Failed to encode file ${file.name}:`, error);
@@ -553,7 +553,7 @@
                 continue;
             }
         }
-
+        
         renderFileList(mode);
     }
 
@@ -648,7 +648,7 @@
 
             const formData = collectFormData();
             console.log('Form data collected:', formData);
-
+            
             const refId = await sendViaEmailJS(formData);
 
             document.getElementById('missionId').textContent = refId;
@@ -775,7 +775,8 @@
     function collectFormData() {
         const form = document.getElementById('missionForm');
         const siteName = currentSite ? currentSite.name : form.siteSelection.value;
-        const hasAttachments = uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0);
+        // Ensure hasAttachments is always a boolean
+        const hasAttachments = Boolean(uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0));
 
         // Helper to safely get form field value
         const getFieldValue = (fieldName, defaultValue = '') => {
@@ -816,7 +817,7 @@
                 SubmittedAt: new Date().toISOString(),
 
                 // Include KML content if available
-                HasKML: currentKmlData ? true : false, // Boolean
+                HasKML: Boolean(currentKmlData && currentKmlData.length > 0), // Boolean
                 KMLContent: currentKmlData || '',
 
                 // Include file attachments with base64 content
@@ -896,7 +897,7 @@
             EmailContact: getFieldValue('submitterEmail'),
             PhContact: getFieldValue('contactNumber'),
             Attachment: hasAttachments, // Boolean: true/false
-            CustomerParameters: form.customParams && form.customParams.checked ? true : false, // Boolean
+            CustomerParameters: Boolean(form.customParams && form.customParams.checked), // Boolean
 
             // Custom parameters (only if enabled)
             Resolution: form.customParams && form.customParams.checked && getFieldValue('imageResolution') ? parseFloat(getFieldValue('imageResolution')) : null,
@@ -913,9 +914,9 @@
 
             // File names only
             AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
-
+            
             // Include actual KML content
-            HasKML: currentKmlData ? true : false, // Boolean
+            HasKML: Boolean(currentKmlData && currentKmlData.length > 0), // Boolean
             KMLContent: currentKmlData || '',
 
             // Include file attachments with base64 content
@@ -952,7 +953,7 @@
         if (!data.EmailContact) {
             throw new Error('Email is required');
         }
-
+        
         // Validate priority
         const validPriorities = ['1', '2', '3', '4', '5'];
         if (!data.Priority || !validPriorities.includes(data.Priority)) {
@@ -1071,7 +1072,7 @@
         try {
             console.log('Sending email via EmailJS...');
             console.log('Template params:', templateParams);
-
+            
             const response = await emailjs.send(
                 EMAILJS_CONFIG.serviceId,
                 EMAILJS_CONFIG.templateId,
@@ -1084,7 +1085,7 @@
 
             console.log('Email sent successfully:', response);
             return refId;
-
+            
         } catch (error) {
             console.error('EmailJS send error:', error);
             throw new Error('Failed to send email: ' + (error.text || error.message));
