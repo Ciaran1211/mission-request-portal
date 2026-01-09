@@ -807,7 +807,7 @@
                 Company: currentCompany.name,
                 Site: siteName,
                 SiteKey: getFieldValue('siteSelection'),
-                Priority: repeatPriority ? parseInt(repeatPriority.value) : 3, // Read from form or default to 3
+                Priority: repeatPriority ? repeatPriority.value : '3', // String for SharePoint Choice field
                 RequestedBy: repeatName ? repeatName.value : '',
                 EmailContact: repeatEmail ? repeatEmail.value : '',
                 PhContact: repeatPhone ? repeatPhone.value : '',
@@ -885,7 +885,7 @@
             ScheduledDate: getFieldValue('missionDate'),
             Company: currentCompany.name,
             Site: siteName,
-            Priority: parseInt(getFieldValue('missionPriority')) || 3, // Integer 1-5
+            Priority: getFieldValue('missionPriority') || '3', // String for SharePoint Choice field
             MissionType: missionTypeForForm,
             Frequency: frequency,
             MissionPlan: 'New Request',
@@ -954,7 +954,8 @@
         }
 
         // Validate priority
-        if (!data.Priority || data.Priority < 1 || data.Priority > 5) {
+        const validPriorities = ['1', '2', '3', '4', '5'];
+        if (!data.Priority || !validPriorities.includes(data.Priority)) {
             throw new Error('Please select a valid priority (1-5)');
         }
 
@@ -984,7 +985,8 @@
         });
 
         // Validate data types
-        if (data.Priority && (data.Priority < 1 || data.Priority > 5)) {
+        const validPriorities = ['1', '2', '3', '4', '5'];
+        if (data.Priority && !validPriorities.includes(data.Priority)) {
             throw new Error('Priority must be between 1 and 5');
         }
 
