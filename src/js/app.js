@@ -17,6 +17,14 @@
     let repeatMissionRows = []; // Array of {mission: object, comment: ''}
 
     // ============================================================
+    // FILE UPLOAD CONFIGURATION
+    // ============================================================
+    // Power Automate HTTP trigger endpoint for file uploads
+    // TO SETUP: Create HTTP trigger flow, then paste the URL here
+    const FILE_UPLOAD_ENDPOINT = 'YOUR_POWER_AUTOMATE_HTTP_URL';
+    // Example: 'https://prod-00.eastus.logic.azure.com:443/workflows/.../triggers/manual/paths/invoke?...'
+
+    // ============================================================
     // IFRAME COMMUNICATION (Map Widget)
     // ============================================================
     function getMapFrame() {
@@ -73,7 +81,13 @@
 
         currentCompany = COMPANY_CONFIG[companyKey];
         document.getElementById('companyId').value = companyKey;
-        document.getElementById('companyBadge').textContent = currentCompany.displayName;
+        // Set company logo
+        const companyBadge = document.getElementById('companyBadge');
+        if (currentCompany.logo) {
+            companyBadge.innerHTML = `<img src="${currentCompany.logo}" alt="${currentCompany.displayName}" class="company-logo">`;
+        } else {
+            companyBadge.textContent = currentCompany.displayName;
+        }
 
         populateSites();
         setupEventListeners();
@@ -448,6 +462,7 @@
      * @param {File} file - File to convert
      * @returns {Promise<string>} Base64 encoded string (without data URL prefix)
      */
+    // Convert file to base64 for upload
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -462,6 +477,41 @@
             };
             reader.readAsDataURL(file);
         });
+    }
+
+    // Upload file to Power Automate HTTP trigger
+    async function uploadFileToPowerAutomate(fileName, base64Content, missionRef, fileType) {
+        // Check if endpoint is configured
+        if (!FILE_UPLOAD_ENDPOINT || FILE_UPLOAD_ENDPOINT === 'https://default0d0ae4136f89412e8ba95ea4efeb79.81.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/06e7553c7ba54e239d91319adf12a337/triggers/manual/paths/invoke?api-version=1') {
+            throw new Error('File upload endpoint not configured. Please set FILE_UPLOAD_ENDPOINT in app.js');
+        }
+
+        try {
+            const response = await fetch(FILE_UPLOAD_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    fileName: fileName,
+                    fileContent: base64Content,
+                    missionRef: missionRef,
+                    fileType: fileType
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+            }
+
+            const result = await response.json();
+            return result;
+
+        } catch (error) {
+            console.error('Power Automate upload error:', error);
+            throw error;
+        }
     }
 
     function setupFileUpload() {
@@ -521,6 +571,9 @@
     }
 
     async function handleFiles(files, mode = 'single') {
+        // Generate unique mission reference for file organization
+        const missionRef = `MR${Date.now().toString(36).toUpperCase()}`;
+
         for (const file of Array.from(files)) {
             // Check for duplicates
             if (uploadedFiles.some(f => f.name === file.name)) {
@@ -528,33 +581,64 @@
                 continue;
             }
             
-            // Check file size - set limit to 5MB for base64 encoding
-            if (file.size > 5 * 1024 * 1024) {
-                alert(`File "${file.name}" is too large. Maximum size is 5MB per file.`);
+            // Check file size (100MB limit for Power Automate)
+            if (file.size > 100 * 1024 * 1024) {
+                alert(`File "${file.name}" is too large. Maximum size is 100MB per file.`);
                 continue;
             }
             
+            // Add file with uploading status
+            const tempFile = {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                status: 'uploading',
+                originalFile: file
+            };
+            uploadedFiles.push(tempFile);
+            renderFileList(mode);
+
             try {
-                // Convert to base64 for transmission
+                console.log(`Uploading ${file.name} to SharePoint...`);
+
+                // Convert to base64
                 const base64Content = await fileToBase64(file);
                 
-                uploadedFiles.push({
-                    name: file.name,
-                    size: file.size,
-                    type: file.type,
-                    base64: base64Content,
-                    originalFile: file  // Keep reference for display purposes
-                });
+                // Upload to Power Automate
+                const uploadResult = await uploadFileToPowerAutomate(file.name, base64Content, missionRef, file.type);
+
+                // Update with success
+                const fileIndex = uploadedFiles.findIndex(f => f.name === file.name && f.status === 'uploading');
+                if (fileIndex !== -1) {
+                    uploadedFiles[fileIndex] = {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        status: 'uploaded',
+                        fileId: uploadResult.fileId,
+                        webUrl: uploadResult.webUrl,
+                        missionRef: uploadResult.missionRef,
+                        originalFile: file
+                    };
+                }
                 
-                console.log(`File ${file.name} encoded successfully (${formatFileSize(file.size)})`);
+                console.log(`✅ ${file.name} uploaded successfully`);
+
             } catch (error) {
-                console.error(`Failed to encode file ${file.name}:`, error);
-                alert(`Failed to process file "${file.name}". Please try again.`);
-                continue;
+                console.error(`Failed to upload file ${file.name}:`, error);
+
+                // Update with error status
+                const fileIndex = uploadedFiles.findIndex(f => f.name === file.name && f.status === 'uploading');
+                if (fileIndex !== -1) {
+                    uploadedFiles[fileIndex].status = 'error';
+                    uploadedFiles[fileIndex].error = error.message;
+                }
+
+                alert(`Failed to upload "${file.name}": ${error.message}\n\nPlease try again or contact support if the issue persists.`);
             }
+
+            renderFileList(mode);
         }
-        
-        renderFileList(mode);
     }
 
     function renderFileList(mode = 'single') {
@@ -569,7 +653,18 @@
 
             uploadedFiles.forEach((file, index) => {
                 const item = document.createElement('div');
-                item.className = 'file-item';
+                item.className = `file-item ${file.status || ''}`;
+
+                // Status icon
+                let statusIcon = '';
+                if (file.status === 'uploaded') {
+                    statusIcon = '<span style="color: var(--green); font-size: 14px; margin-left: 8px;" title="Uploaded successfully">✓</span>';
+                } else if (file.status === 'error') {
+                    statusIcon = '<span style="color: var(--red); font-size: 14px; margin-left: 8px;" title="Upload failed">✗</span>';
+                } else if (file.status === 'uploading') {
+                    statusIcon = '<span style="color: var(--cyan); font-size: 12px; margin-left: 8px;">Uploading...</span>';
+                }
+
                 item.innerHTML = `
                     <div class="file-item-info">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -578,12 +673,15 @@
                         </svg>
                         <span class="file-item-name">${file.name}</span>
                         <span class="file-item-size">${formatFileSize(file.size)}</span>
+                        ${statusIcon}
                     </div>
-                    <button type="button" class="file-item-remove" data-index="${index}">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 6L6 18M6 6l12 12"/>
-                        </svg>
-                    </button>
+                    ${file.status !== 'uploading' ? `
+                        <button type="button" class="file-item-remove" data-index="${index}" title="Remove file">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    ` : ''}
                 `;
                 fileList.appendChild(item);
             });
@@ -651,7 +749,8 @@
             
             const refId = await sendViaEmailJS(formData);
 
-            document.getElementById('missionId').textContent = refId;
+            // Show mission title in success modal
+            document.getElementById('missionId').textContent = formData.Title;
             document.getElementById('successModal').style.display = 'flex';
 
         } catch (error) {
@@ -816,17 +915,19 @@
                 AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
                 SubmittedAt: new Date().toISOString(),
 
-                // Include KML content if available
+                // Include KML content if available (usually small enough)
                 HasKML: Boolean(currentKmlData && currentKmlData.length > 0), // Boolean
                 KMLContent: currentKmlData || '',
 
-                // Include file attachments with base64 content
-                AttachmentFiles: uploadedFiles.map(f => ({
-                    name: f.name,
-                    type: f.type,
-                    size: f.size,
-                    content: f.base64
-                })),
+                // Include uploaded file references (files already uploaded to SharePoint)
+                UploadedFileRefs: uploadedFiles
+                    .filter(f => f.status === 'uploaded') // Only successfully uploaded files
+                    .map(f => ({
+                        name: f.name,
+                        fileId: f.fileId,
+                        webUrl: f.webUrl,
+                        missionRef: f.missionRef
+                    })),
 
                 // Repeat missions array with full SharePoint field data
                 RepeatMissions: validMissions.map((row, index) => ({
@@ -915,17 +1016,19 @@
             // File names only
             AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
             
-            // Include actual KML content
+            // Include actual KML content (usually small enough for EmailJS)
             HasKML: Boolean(currentKmlData && currentKmlData.length > 0), // Boolean
             KMLContent: currentKmlData || '',
 
-            // Include file attachments with base64 content
-            AttachmentFiles: uploadedFiles.map(f => ({
-                name: f.name,
-                type: f.type,
-                size: f.size,
-                content: f.base64
-            }))
+            // Include uploaded file references (files already uploaded to SharePoint)
+            UploadedFileRefs: uploadedFiles
+                .filter(f => f.status === 'uploaded') // Only successfully uploaded files
+                .map(f => ({
+                    name: f.name,
+                    fileId: f.fileId,
+                    webUrl: f.webUrl,
+                    missionRef: f.missionRef
+                }))
         };
 
         // Validate data types according to schema

@@ -8,6 +8,7 @@ const COMPANY_CONFIG = {
     'BMA': {
         name: 'BMA',
         displayName: 'BHP Mitsubishi Alliance',
+        logo: 'https://your-domain.com/logos/norton-logo.png',
         sites: {
             'SR': {
                 name: 'Saraji',

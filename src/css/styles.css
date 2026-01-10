@@ -1115,3 +1115,23 @@ input[type="radio"]:checked + .toggle-option svg {
         margin-top: 8px;
     }
 }
+.company-logo {
+    max-height: 32px;
+    max-width: 150px;
+    object-fit: contain;
+}
+
+/* File Upload Status */
+.file-item.uploading {
+    opacity: 0.7;
+    border-left: 3px solid var(--cyan);
+}
+
+.file-item.uploaded {
+    border-left: 3px solid var(--green);
+}
+
+.file-item.error {
+    border-left: 3px solid var(--red);
+    background: rgba(239, 68, 68, 0.05);
+}
