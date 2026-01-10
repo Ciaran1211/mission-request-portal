@@ -1,26 +1,96 @@
-// Map Widget for Mission Request Portal
-// Handles map initialization, drawing tools, KML generation, and all interactions
-// Matches functionality of widget-final.html
+/**
+ * Map Widget for Mission Request Portal
+ * ======================================
+ * 
+ * Interactive map component for drawing mission areas using OpenLayers.
+ * Supports polygon, rectangle, circle, line, and point geometries.
+ * Generates KML output for mission planning systems.
+ * 
+ * Features:
+ * - Multiple drawing tools with undo support
+ * - Layer switching (OSM, Satellite, Ortho)
+ * - Fullscreen mode
+ * - KML export and download
+ * - Parent window communication via postMessage
+ * 
+ * Dependencies:
+ * - OpenLayers 8.2.0 (loaded via CDN in map-widget.html)
+ * 
+ * @module MapWidget
+ * @version 2.0.0
+ * @author RocketDNA Development Team
+ */
 
 const MapWidget = (function() {
     'use strict';
 
-    // ============================================================
-    // STATE
-    // ============================================================
+    /* ======================================================================
+       CONSTANTS
+       ====================================================================== */
+
+    /**
+     * Default map styling for drawn features
+     * @constant {Object}
+     */
+    const DRAW_STYLE = {
+        fillColor: 'rgba(10, 186, 239, 0.2)',
+        strokeColor: '#0ABAEF',
+        strokeWidth: 2,
+        pointRadius: 6,
+        pointFillColor: '#0ABAEF',
+        pointStrokeColor: '#fff',
+        pointStrokeWidth: 2
+    };
+
+    /**
+     * KML export style (orange/yellow for visibility)
+     * @constant {Object}
+     */
+    const KML_STYLE = {
+        fillColor: [239, 186, 10, 0.3],
+        strokeColor: [239, 186, 10, 1],
+        strokeWidth: 2
+    };
+
+    /* ======================================================================
+       STATE MANAGEMENT
+       ====================================================================== */
+
+    /**
+     * Module state container
+     * Centralized storage for all mutable state
+     */
     const State = {
+        /** @type {ol.Map|null} OpenLayers map instance */
         map: null,
+        
+        /** @type {ol.source.Vector|null} Vector source for drawn features */
         drawSource: null,
+        
+        /** @type {ol.interaction.Draw|null} Current drawing interaction */
         drawInteraction: null,
+        
+        /** @type {Array<ol.Feature>} History of drawn features for undo */
         featureHistory: [],
+        
+        /** @type {Object|null} Current site configuration */
         currentConfig: null,
+        
+        /** @type {ol.layer.Tile|null} Ortho imagery layer */
         orthoLayer: null,
+        
+        /** @type {boolean} Initialization flag */
         initialized: false
     };
 
-    // ============================================================
-    // MODAL SYSTEM
-    // ============================================================
+    /* ======================================================================
+       MODAL SYSTEM
+       ====================================================================== */
+
+    /**
+     * Modal dialog manager
+     * Handles confirmation dialogs for destructive actions
+     */
     const Modal = {
         el: null,
         titleEl: null,
@@ -28,6 +98,9 @@ const MapWidget = (function() {
         confirmBtn: null,
         cancelBtn: null,
 
+        /**
+         * Initializes modal DOM references and event handlers
+         */
         init() {
             this.el = document.getElementById('mapModal');
             this.titleEl = document.getElementById('mapModalTitle');
@@ -45,6 +118,15 @@ const MapWidget = (function() {
             }
         },
 
+        /**
+         * Shows a modal dialog
+         * 
+         * @param {string} title - Dialog title
+         * @param {string} message - Dialog message
+         * @param {string} confirmText - Text for confirm button
+         * @param {string} type - Button style: 'primary' or 'danger'
+         * @param {Function} onConfirm - Callback when confirmed
+         */
         show(title, message, confirmText, type, onConfirm) {
             if (!this.el) return;
             
@@ -66,6 +148,9 @@ const MapWidget = (function() {
             this.el.classList.add('show');
         },
 
+        /**
+         * Hides the modal dialog
+         */
         hide() {
             if (this.el) {
                 this.el.classList.remove('show');
@@ -73,12 +158,20 @@ const MapWidget = (function() {
         }
     };
 
-    // ============================================================
-    // STATUS MANAGEMENT
-    // ============================================================
+    /* ======================================================================
+       STATUS MANAGEMENT
+       ====================================================================== */
+
+    /**
+     * Updates the status indicator in the UI
+     * 
+     * @param {string} status - Status class: 'ready', 'drawing'
+     * @param {string} text - Status message to display
+     */
     function setStatus(status, text) {
         const dot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
+        
         if (dot) {
             dot.className = `status-dot ${status}`;
         }
@@ -87,25 +180,76 @@ const MapWidget = (function() {
         }
     }
 
-    // ============================================================
-    // MAP INITIALIZATION
-    // ============================================================
+    /* ======================================================================
+       MAP INITIALIZATION
+       ====================================================================== */
+
+    /**
+     * Initializes the map widget
+     * Creates map instance, layers, and sets up interactions
+     * 
+     * @param {Object} config - Initial configuration
+     * @param {Array<number>} config.center - [longitude, latitude] center point
+     * @param {number} config.defaultZoom - Initial zoom level
+     * @param {string} config.orthoUrl - URL template for ortho tiles
+     * @returns {ol.Map} The initialized map instance
+     */
     function init(config) {
+        // If already initialized, just update the site
         if (State.initialized) {
             updateSite(config);
             return State.map;
         }
 
+        // Store configuration with defaults
         State.currentConfig = config || {
             center: [134.0, -25.0],
             defaultZoom: 5,
             orthoUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
         };
 
-        // Initialize modal
+        // Initialize modal system
         Modal.init();
 
         // Create base layers
+        const layers = createBaseLayers();
+        
+        // Create drawing layer
+        State.drawSource = new ol.source.Vector();
+        const drawLayer = createDrawLayer();
+
+        // Initialize map
+        State.map = new ol.Map({
+            target: 'map',
+            layers: [...layers, drawLayer],
+            view: new ol.View({
+                center: ol.proj.fromLonLat(State.currentConfig.center),
+                zoom: State.currentConfig.defaultZoom,
+                maxZoom: 21
+            }),
+            controls: ol.control.defaults.defaults({ zoom: false }).extend([
+                new ol.control.ScaleLine()
+            ])
+        });
+
+        // Set up event handlers
+        setupMapEventHandlers();
+        setupToolButtons();
+        setupLayerButtons();
+        setupFullscreen();
+        setupResizeHandler();
+
+        State.initialized = true;
+        setStatus('ready', 'Ready');
+
+        return State.map;
+    }
+
+    /**
+     * Creates the base map layers
+     * @returns {Array<ol.layer.Tile>} Array of base layers
+     */
+    function createBaseLayers() {
         const osm = new ol.layer.Tile({
             source: new ol.source.OSM(),
             visible: false,
@@ -121,7 +265,6 @@ const MapWidget = (function() {
             properties: { name: 'satellite' }
         });
 
-        // Ortho layer - can be updated per site
         State.orthoLayer = new ol.layer.Tile({
             source: new ol.source.XYZ({
                 url: State.currentConfig.orthoUrl || 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -131,35 +274,38 @@ const MapWidget = (function() {
             properties: { name: 'ortho' }
         });
 
-        // Drawing layer
-        State.drawSource = new ol.source.Vector();
-        const drawLayer = new ol.layer.Vector({
+        return [osm, satellite, State.orthoLayer];
+    }
+
+    /**
+     * Creates the drawing layer with consistent styling
+     * @returns {ol.layer.Vector} Configured vector layer
+     */
+    function createDrawLayer() {
+        return new ol.layer.Vector({
             source: State.drawSource,
             style: new ol.style.Style({
-                fill: new ol.style.Fill({ color: 'rgba(10, 186, 239, 0.2)' }),
-                stroke: new ol.style.Stroke({ color: '#0ABAEF', width: 2 }),
+                fill: new ol.style.Fill({ color: DRAW_STYLE.fillColor }),
+                stroke: new ol.style.Stroke({ 
+                    color: DRAW_STYLE.strokeColor, 
+                    width: DRAW_STYLE.strokeWidth 
+                }),
                 image: new ol.style.Circle({
-                    radius: 6,
-                    fill: new ol.style.Fill({ color: '#0ABAEF' }),
-                    stroke: new ol.style.Stroke({ color: '#fff', width: 2 })
+                    radius: DRAW_STYLE.pointRadius,
+                    fill: new ol.style.Fill({ color: DRAW_STYLE.pointFillColor }),
+                    stroke: new ol.style.Stroke({ 
+                        color: DRAW_STYLE.pointStrokeColor, 
+                        width: DRAW_STYLE.pointStrokeWidth 
+                    })
                 })
             })
         });
+    }
 
-        // Initialize map
-        State.map = new ol.Map({
-            target: 'map',
-            layers: [osm, satellite, State.orthoLayer, drawLayer],
-            view: new ol.View({
-                center: ol.proj.fromLonLat(State.currentConfig.center),
-                zoom: State.currentConfig.defaultZoom,
-                maxZoom: 21
-            }),
-            controls: ol.control.defaults.defaults({ zoom: false }).extend([
-                new ol.control.ScaleLine()
-            ])
-        });
-
+    /**
+     * Sets up map event handlers
+     */
+    function setupMapEventHandlers() {
         // Coordinate display on pointer move
         State.map.on('pointermove', (evt) => {
             const coords = ol.proj.toLonLat(evt.coordinate);
@@ -169,7 +315,7 @@ const MapWidget = (function() {
             }
         });
 
-        // Update feature count on change
+        // Update feature count and KML on source change
         State.drawSource.on('change', () => {
             const count = State.drawSource.getFeatures().length;
             const featureCountEl = document.getElementById('featureCount');
@@ -178,24 +324,17 @@ const MapWidget = (function() {
             }
             updateKmlData();
         });
-
-        // Setup all interactions
-        setupToolButtons();
-        setupLayerButtons();
-        setupFullscreen();
-        setupResizeHandler();
-
-        State.initialized = true;
-        setStatus('ready', 'Ready');
-
-        return State.map;
     }
 
-    // ============================================================
-    // TOOL BUTTONS
-    // ============================================================
+    /* ======================================================================
+       DRAWING TOOLS
+       ====================================================================== */
+
+    /**
+     * Sets up drawing tool button event handlers
+     */
     function setupToolButtons() {
-        // Drawing tools
+        // Drawing tool buttons
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tool = btn.dataset.tool;
@@ -216,16 +355,17 @@ const MapWidget = (function() {
         });
 
         // Clear button
-        document.getElementById('clearBtn')?.addEventListener('click', () => {
-            clearFeatures();
-        });
+        document.getElementById('clearBtn')?.addEventListener('click', clearFeatures);
 
         // Download KML button
-        document.getElementById('downloadBtn')?.addEventListener('click', () => {
-            downloadKML();
-        });
+        document.getElementById('downloadBtn')?.addEventListener('click', downloadKML);
     }
 
+    /**
+     * Activates a drawing tool
+     * 
+     * @param {string|null} toolType - Tool type: 'Polygon', 'Box', 'Circle', 'LineString', 'Point', or null to deactivate
+     */
     function setTool(toolType) {
         // Remove existing interaction
         if (State.drawInteraction) {
@@ -249,18 +389,16 @@ const MapWidget = (function() {
             activeBtn.classList.add('active');
         }
 
-        // Create geometry function for special types
+        // Configure geometry function for special types
         let geometryFunction;
         let type = toolType;
 
         if (toolType === 'Box') {
             geometryFunction = ol.interaction.Draw.createBox();
-            type = 'Circle';
-        } else if (toolType === 'Circle') {
-            type = 'Circle';
+            type = 'Circle'; // Box uses Circle type with custom geometry function
         }
 
-        // Create new draw interaction
+        // Create draw interaction
         State.drawInteraction = new ol.interaction.Draw({
             source: State.drawSource,
             type: type,
@@ -280,23 +418,32 @@ const MapWidget = (function() {
         setStatus('ready', `${toolType} active`);
     }
 
-    // ============================================================
-    // LAYER BUTTONS
-    // ============================================================
+    /* ======================================================================
+       LAYER CONTROLS
+       ====================================================================== */
+
+    /**
+     * Sets up layer switch button event handlers
+     */
     function setupLayerButtons() {
         document.querySelectorAll('.layer-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const layerName = btn.dataset.layer;
-                switchLayer(layerName);
+                switchLayer(btn.dataset.layer);
             });
         });
     }
 
+    /**
+     * Switches the visible base layer
+     * @param {string} layerName - Layer name: 'osm', 'satellite', or 'ortho'
+     */
     function switchLayer(layerName) {
+        // Update button states
         document.querySelectorAll('.layer-btn').forEach(b => {
             b.classList.toggle('active', b.dataset.layer === layerName);
         });
 
+        // Toggle layer visibility
         State.map.getLayers().forEach(lyr => {
             const name = lyr.get('name');
             if (name) {
@@ -305,9 +452,13 @@ const MapWidget = (function() {
         });
     }
 
-    // ============================================================
-    // FULLSCREEN
-    // ============================================================
+    /* ======================================================================
+       FULLSCREEN CONTROLS
+       ====================================================================== */
+
+    /**
+     * Sets up fullscreen toggle functionality
+     */
     function setupFullscreen() {
         const fullscreenBtn = document.getElementById('fullscreenToggle');
         if (fullscreenBtn) {
@@ -318,6 +469,9 @@ const MapWidget = (function() {
         document.addEventListener('webkitfullscreenchange', updateFullscreenUI);
     }
 
+    /**
+     * Toggles fullscreen mode with confirmation
+     */
     function toggleFullscreen() {
         const mapContainer = document.querySelector('.map-container');
         
@@ -346,6 +500,9 @@ const MapWidget = (function() {
         }
     }
 
+    /**
+     * Updates UI elements for fullscreen state
+     */
     function updateFullscreenUI() {
         const isFs = !!document.fullscreenElement;
         const iconMaximize = document.getElementById('icon-maximize');
@@ -362,9 +519,13 @@ const MapWidget = (function() {
         }, 200);
     }
 
-    // ============================================================
-    // RESIZE HANDLER
-    // ============================================================
+    /* ======================================================================
+       RESIZE HANDLING
+       ====================================================================== */
+
+    /**
+     * Sets up window resize handler with debouncing
+     */
     function setupResizeHandler() {
         let resizeTimer;
         window.addEventListener('resize', () => {
@@ -375,9 +536,13 @@ const MapWidget = (function() {
         });
     }
 
-    // ============================================================
-    // CLEAR FEATURES
-    // ============================================================
+    /* ======================================================================
+       FEATURE MANAGEMENT
+       ====================================================================== */
+
+    /**
+     * Clears all drawn features with confirmation
+     */
     function clearFeatures() {
         if (State.drawSource.getFeatures().length === 0) {
             setStatus('ready', 'Nothing to clear');
@@ -397,9 +562,16 @@ const MapWidget = (function() {
         );
     }
 
-    // ============================================================
-    // KML GENERATION & DOWNLOAD
-    // ============================================================
+    /* ======================================================================
+       KML GENERATION & EXPORT
+       ====================================================================== */
+
+    /**
+     * Generates KML string from drawn features
+     * Converts circles to polygons since KML doesn't support native circles
+     * 
+     * @returns {string} KML formatted string or empty string if no features
+     */
     function generateKML() {
         if (!State.drawSource) return '';
 
@@ -411,6 +583,7 @@ const MapWidget = (function() {
             writeStyles: true
         });
 
+        // Clone and transform features for KML export
         const featuresClone = features.map(f => {
             const clone = f.clone();
             let geom = clone.getGeometry();
@@ -421,17 +594,28 @@ const MapWidget = (function() {
                 clone.setGeometry(geom);
             }
 
+            // Transform to geographic coordinates
             geom.transform('EPSG:3857', 'EPSG:4326');
+            
+            // Apply KML styling
             clone.setStyle(new ol.style.Style({
-                fill: new ol.style.Fill({ color: [10, 186, 239, 0.3] }),
-                stroke: new ol.style.Stroke({ color: [10, 186, 239, 1], width: 2 })
+                fill: new ol.style.Fill({ color: KML_STYLE.fillColor }),
+                stroke: new ol.style.Stroke({ 
+                    color: KML_STYLE.strokeColor, 
+                    width: KML_STYLE.strokeWidth 
+                })
             }));
+            
             return clone;
         });
 
         return format.writeFeatures(featuresClone);
     }
 
+    /**
+     * Updates the hidden KML data input field
+     * Called whenever features change
+     */
     function updateKmlData() {
         const kml = generateKML();
         const kmlInput = document.getElementById('kmlData');
@@ -440,6 +624,9 @@ const MapWidget = (function() {
         }
     }
 
+    /**
+     * Downloads the current features as a KML file
+     */
     function downloadKML() {
         const kml = generateKML();
         if (!kml) {
@@ -459,9 +646,16 @@ const MapWidget = (function() {
         setStatus('ready', 'Download started');
     }
 
-    // ============================================================
-    // SITE UPDATE
-    // ============================================================
+    /* ======================================================================
+       SITE UPDATE
+       ====================================================================== */
+
+    /**
+     * Updates the map to a new site configuration
+     * Prompts for confirmation if features exist
+     * 
+     * @param {Object} config - New site configuration
+     */
     function updateSite(config) {
         if (!State.map || !config) return;
 
@@ -473,15 +667,17 @@ const MapWidget = (function() {
                 'Changing sites will clear your current drawings. Do you want to continue?',
                 'Change Site',
                 'danger',
-                () => {
-                    performSiteUpdate(config);
-                }
+                () => performSiteUpdate(config)
             );
         } else {
             performSiteUpdate(config);
         }
     }
 
+    /**
+     * Performs the actual site update
+     * @param {Object} config - New site configuration
+     */
     function performSiteUpdate(config) {
         State.currentConfig = config;
 
@@ -491,7 +687,7 @@ const MapWidget = (function() {
             State.featureHistory = [];
         }
 
-        // Update ortho layer source if URL is different
+        // Update ortho layer source if URL changed
         if (config.orthoUrl && State.orthoLayer) {
             State.orthoLayer.setSource(new ol.source.XYZ({
                 url: config.orthoUrl,
@@ -509,13 +705,21 @@ const MapWidget = (function() {
         setStatus('ready', 'Site updated');
     }
 
-    // ============================================================
-    // PUBLIC API
-    // ============================================================
+    /* ======================================================================
+       PUBLIC API
+       ====================================================================== */
+
+    /**
+     * Gets the count of drawn features
+     * @returns {number} Feature count
+     */
     function getFeatureCount() {
         return State.drawSource ? State.drawSource.getFeatures().length : 0;
     }
 
+    /**
+     * Clears all features without confirmation
+     */
     function clear() {
         if (State.drawSource) {
             State.drawSource.clear();
@@ -523,14 +727,23 @@ const MapWidget = (function() {
         }
     }
 
+    /**
+     * Checks if the widget is initialized
+     * @returns {boolean} Initialization state
+     */
     function isInitialized() {
         return State.initialized;
     }
 
+    /**
+     * Gets the OpenLayers map instance
+     * @returns {ol.Map|null} Map instance
+     */
     function getMap() {
         return State.map;
     }
 
+    // Return public API
     return {
         init,
         generateKML,
@@ -544,5 +757,5 @@ const MapWidget = (function() {
     };
 })();
 
-// Export for use in app.js
+// Export for global access
 window.MapWidget = MapWidget;

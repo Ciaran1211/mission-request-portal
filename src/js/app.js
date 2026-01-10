@@ -1,113 +1,309 @@
-// Main Application JavaScript
-// Handles form logic, validation, file uploads, and EmailJS submission
-// Sends structured data via email for Power Automate to parse
+/**
+ * Mission Request Portal - Main Application Module
+ * =================================================
+ *
+ * Core application logic for the drone mission request form.
+ * Handles form interactions, validation, file uploads, and submission.
+ *
+ * Architecture:
+ * - IIFE pattern for encapsulation and avoiding global pollution
+ * - Event-driven design with centralized state management
+ * - Modular functions organized by responsibility
+ *
+ * Data Flow:
+ * Form Input → Validation → Data Collection → EmailJS → Power Automate → SharePoint
+ *
+ * Dependencies:
+ * - config.js (COMPANY_CONFIG, EMAILJS_CONFIG)
+ * - EmailJS SDK (loaded via CDN)
+ *
+ * @module app
+ * @version 2.0.0
+ * @author RocketDNA Development Team
+ */
 
 (function() {
     'use strict';
 
-    // ============================================================
-    // STATE
-    // ============================================================
-    let currentCompany = null;
-    let currentSite = null;
-    let currentKmlData = '';
-    let uploadedFiles = [];
-    let isSubmitting = false;
-    let requestType = 'single'; // 'single' or 'repeat'
-    let repeatMissionRows = []; // Array of {mission: object, comment: ''}
+    /* ======================================================================
+       CONSTANTS & CONFIGURATION
+       ====================================================================== */
 
-    // ============================================================
-    // FILE UPLOAD CONFIGURATION
-    // ============================================================
-    // Power Automate HTTP trigger endpoint for file uploads
-    // TO SETUP: Create HTTP trigger flow, then paste the URL here
+    /**
+     * Power Automate HTTP trigger endpoint for direct file uploads.
+     * Files are uploaded directly to SharePoint, bypassing email size limits.
+     *
+     * Setup Instructions:
+     * 1. Create Power Automate flow with HTTP Request trigger
+     * 2. Configure flow to receive JSON with fileName, fileContent, missionRef
+     * 3. Add SharePoint "Create File" action
+     * 4. Copy the HTTP POST URL here
+     */
     const FILE_UPLOAD_ENDPOINT = 'https://default0d0ae4136f89412e8ba95ea4efeb79.81.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/06e7553c7ba54e239d91319adf12a337/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=G4qLLP60bZw6guaEKK-rWGI-33t6iW30LVQCsIUQd0k';
-    // Example: 'https://prod-00.eastus.logic.azure.com:443/workflows/.../triggers/manual/paths/invoke?...'
 
-    // ============================================================
-    // IFRAME COMMUNICATION (Map Widget)
-    // ============================================================
-    function getMapFrame() {
-        return document.getElementById('mapWidgetFrame');
+    /**
+     * Maximum file size for uploads (100MB for Power Automate)
+     * @constant {number}
+     */
+    const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+
+    /**
+     * Valid priority values for SharePoint Choice field
+     * @constant {string[]}
+     */
+    const VALID_PRIORITIES = ['1', '2', '3', '4', '5'];
+
+    /* ======================================================================
+       APPLICATION STATE
+       ====================================================================== */
+
+    /**
+     * Centralized application state
+     * Maintains all mutable data in a single location for predictability
+     */
+    const AppState = {
+        /** @type {Object|null} Current company configuration from COMPANY_CONFIG */
+        currentCompany: null,
+
+        /** @type {Object|null} Current site configuration within the company */
+        currentSite: null,
+
+        /** @type {string} KML data from the map widget */
+        currentKmlData: '',
+
+        /** @type {Array<Object>} Files added for upload with status tracking */
+        uploadedFiles: [],
+
+        /** @type {boolean} Prevents duplicate submissions */
+        isSubmitting: false,
+
+        /** @type {string} Current request type: 'single' or 'repeat' */
+        requestType: 'single',
+
+        /** @type {Array<Object>} Selected repeat missions with comments */
+        repeatMissionRows: []
+    };
+
+    /* ======================================================================
+       DOM ELEMENT CACHE
+       ====================================================================== */
+
+    /**
+     * Cached DOM element references
+     * Improves performance by avoiding repeated querySelector calls
+     */
+    const DOMCache = {
+        form: null,
+        submitBtn: null,
+        siteSelection: null,
+        siteArea: null,
+        mapFrame: null,
+
+        /**
+         * Initializes the DOM cache
+         * Should be called after DOMContentLoaded
+         */
+        init() {
+            this.form = document.getElementById('missionForm');
+            this.submitBtn = document.getElementById('submitBtn');
+            this.siteSelection = document.getElementById('siteSelection');
+            this.siteArea = document.getElementById('siteArea');
+            this.mapFrame = document.getElementById('mapWidgetFrame');
+        }
+    };
+
+    /* ======================================================================
+       UTILITY FUNCTIONS
+       ====================================================================== */
+
+    /**
+     * Safely retrieves the value of a form field
+     * @param {string} fieldName - The name attribute of the form field
+     * @param {string} [defaultValue=''] - Value to return if field is not found
+     * @returns {string} The field value or default
+     */
+    function getFieldValue(fieldName, defaultValue = '') {
+        const field = DOMCache.form?.elements[fieldName];
+        return field ? field.value : defaultValue;
     }
 
+    /**
+     * Formats a date string to YYMMDD format for mission titles
+     * @param {string} dateStr - ISO date string (YYYY-MM-DD)
+     * @returns {string} Formatted date (YYMMDD)
+     */
+    function formatDateYYMMDD(dateStr) {
+        const date = new Date(dateStr);
+        const yy = date.getFullYear().toString().slice(-2);
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yy}${mm}${dd}`;
+    }
+
+    /**
+     * Formats file size in human-readable format
+     * @param {number} bytes - File size in bytes
+     * @returns {string} Formatted size (e.g., "1.5 MB")
+     */
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    /**
+     * Validates an email address format
+     * @param {string} email - Email address to validate
+     * @returns {boolean} True if valid email format
+     */
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    /**
+     * Generates a unique reference ID for mission tracking
+     * @returns {string} Reference ID (e.g., "MR-ABC123")
+     */
+    function generateReferenceId() {
+        return `MR-${Date.now().toString(36).toUpperCase()}`;
+    }
+
+    /* ======================================================================
+       MAP WIDGET COMMUNICATION
+       ====================================================================== */
+
+    /**
+     * Sends a message to the embedded map widget iframe
+     * Uses postMessage for cross-origin communication
+     *
+     * @param {string} type - Message type identifier
+     * @param {Object} [data={}] - Additional data to send
+     */
     function sendToMapWidget(type, data = {}) {
-        const frame = getMapFrame();
-        if (frame && frame.contentWindow) {
-            frame.contentWindow.postMessage(JSON.stringify({ type, ...data }), '*');
+        const frame = DOMCache.mapFrame;
+        if (frame?.contentWindow) {
+            frame.contentWindow.postMessage(
+                JSON.stringify({ type, ...data }),
+                '*'
+            );
         }
     }
 
+    /**
+     * Sets up the message listener for map widget communication
+     * Handles KML data updates and widget ready events
+     */
     function setupMapWidgetListener() {
-        window.addEventListener('message', function(e) {
+        window.addEventListener('message', function(event) {
             try {
-                const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+                const data = typeof event.data === 'string'
+                    ? JSON.parse(event.data)
+                    : event.data;
 
-                if (data.type === 'kmlData') {
-                    currentKmlData = data.kml || '';
-                    document.getElementById('kmlData').value = currentKmlData;
-                    console.log('KML data received from map widget:', currentKmlData ? 'Yes' : 'No');
-                }
+                switch (data.type) {
+                    case 'kmlData':
+                        // Store KML data from map drawings
+                        AppState.currentKmlData = data.kml || '';
+                        const kmlInput = document.getElementById('kmlData');
+                        if (kmlInput) {
+                            kmlInput.value = AppState.currentKmlData;
+                        }
+                        console.log('KML data received:', AppState.currentKmlData ? 'Yes' : 'No');
+                        break;
 
-                if (data.type === 'widgetReady') {
-                    const siteSelect = document.getElementById('siteSelection');
-                    if (siteSelect && siteSelect.value) {
-                        sendToMapWidget('changeSite', { site: siteSelect.value });
-                    }
+                    case 'widgetReady':
+                        // Map widget is ready, send current site if selected
+                        if (DOMCache.siteSelection?.value) {
+                            sendToMapWidget('changeSite', { site: DOMCache.siteSelection.value });
+                        }
+                        break;
                 }
             } catch (err) {
-                // Ignore parsing errors from other messages
+                // Silently ignore parsing errors from unrelated messages
             }
         });
     }
 
-    // ============================================================
-    // INITIALIZATION
-    // ============================================================
+    /* ======================================================================
+       INITIALIZATION
+       ====================================================================== */
+
+    /**
+     * Main initialization function
+     * Sets up the entire application after DOM is ready
+     */
     function init() {
-        // Initialize EmailJS
+        // Cache DOM elements
+        DOMCache.init();
+
+        // Initialize EmailJS with public key
         if (EMAILJS_CONFIG.publicKey && EMAILJS_CONFIG.publicKey !== 'YOUR_PUBLIC_KEY') {
             emailjs.init(EMAILJS_CONFIG.publicKey);
         }
 
-        // Get company from URL parameter
+        // Parse company from URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         const companyKey = urlParams.get('company');
 
+        // Validate company parameter
         if (!companyKey || !COMPANY_CONFIG[companyKey]) {
             showInvalidCompany();
             return;
         }
 
-        currentCompany = COMPANY_CONFIG[companyKey];
+        // Initialize company state
+        AppState.currentCompany = COMPANY_CONFIG[companyKey];
         document.getElementById('companyId').value = companyKey;
-        // Set company logo
-        const companyBadge = document.getElementById('companyBadge');
-        if (currentCompany.logo) {
-            companyBadge.innerHTML = `<img src="${currentCompany.logo}" alt="${currentCompany.displayName}" class="company-logo">`;
-        } else {
-            companyBadge.textContent = currentCompany.displayName;
-        }
 
+        // Set company branding in header
+        setupCompanyBranding();
+
+        // Populate form options and attach event handlers
         populateSites();
         setupEventListeners();
         setupMapWidgetListener();
         setDefaultDate();
 
-        console.log('Mission Request Portal initialized for:', currentCompany.displayName);
+        console.log('Mission Request Portal initialized for:', AppState.currentCompany.displayName);
     }
 
+    /**
+     * Displays company logo or name in the header badge
+     */
+    function setupCompanyBranding() {
+        const companyBadge = document.getElementById('companyBadge');
+        if (!companyBadge) return;
+
+        if (AppState.currentCompany.logo) {
+            companyBadge.innerHTML = `<img src="${AppState.currentCompany.logo}" alt="${AppState.currentCompany.displayName}" class="company-logo">`;
+        } else {
+            companyBadge.textContent = AppState.currentCompany.displayName;
+        }
+    }
+
+    /**
+     * Shows the invalid company error message
+     * Hides the main form content
+     */
     function showInvalidCompany() {
-        document.getElementById('mainContent').style.display = 'none';
-        document.getElementById('invalidCompany').style.display = 'flex';
+        const mainContent = document.getElementById('mainContent');
+        const invalidMessage = document.getElementById('invalidCompany');
+
+        if (mainContent) mainContent.style.display = 'none';
+        if (invalidMessage) invalidMessage.style.display = 'flex';
     }
 
+    /**
+     * Populates the site selection dropdown with company's sites
+     */
     function populateSites() {
-        const siteSelect = document.getElementById('siteSelection');
+        const siteSelect = DOMCache.siteSelection;
+        if (!siteSelect) return;
+
         siteSelect.innerHTML = '<option value="">Select a site...</option>';
 
-        Object.keys(currentCompany.sites).forEach(siteKey => {
-            const site = currentCompany.sites[siteKey];
+        Object.entries(AppState.currentCompany.sites).forEach(([siteKey, site]) => {
             const option = document.createElement('option');
             option.value = siteKey;
             option.textContent = site.name;
@@ -115,16 +311,22 @@
         });
     }
 
+    /**
+     * Populates the site area dropdown based on selected site
+     * @param {string} siteKey - The selected site identifier
+     */
     function populateSiteAreas(siteKey) {
-        const areaSelect = document.getElementById('siteArea');
+        const areaSelect = DOMCache.siteArea;
+        if (!areaSelect) return;
+
         areaSelect.innerHTML = '<option value="">Select area...</option>';
 
-        if (!siteKey || !currentCompany.sites[siteKey]) {
+        if (!siteKey || !AppState.currentCompany.sites[siteKey]) {
             areaSelect.innerHTML = '<option value="">Select site first...</option>';
             return;
         }
 
-        const site = currentCompany.sites[siteKey];
+        const site = AppState.currentCompany.sites[siteKey];
         site.areas.forEach(area => {
             const option = document.createElement('option');
             option.value = area;
@@ -133,130 +335,136 @@
         });
     }
 
-    // ============================================================
-    // REQUEST TYPE HANDLING
-    // ============================================================
+    /**
+     * Sets today's date as default and minimum for date fields
+     */
+    function setDefaultDate() {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+
+        // Single request date field
+        const missionDate = document.getElementById('missionDate');
+        if (missionDate) {
+            missionDate.value = todayStr;
+            missionDate.min = todayStr;
+        }
+
+        // Repeat mission date field
+        const repeatMissionDate = document.getElementById('repeatMissionDate');
+        if (repeatMissionDate) {
+            repeatMissionDate.value = todayStr;
+            repeatMissionDate.min = todayStr;
+        }
+    }
+
+    /* ======================================================================
+       REQUEST TYPE HANDLING
+       ====================================================================== */
+
+    /**
+     * Handles switching between single request and repeat mission modes
+     * Toggles form sections visibility and updates field requirements
+     *
+     * @param {string} type - 'single' or 'repeat'
+     */
     function handleRequestTypeChange(type) {
         console.log('Request type changed to:', type);
-        requestType = type;
+        AppState.requestType = type;
 
-        const singleRequestSections = document.getElementById('singleRequestSections');
-        const repeatMissionSection = document.getElementById('repeatMissionSection');
-        const singleContactSection = document.getElementById('singleContactSection');
-        const singleAttachmentsSection = document.getElementById('singleAttachmentsSection');
+        // DOM elements for section toggling
+        const sections = {
+            singleRequest: document.getElementById('singleRequestSections'),
+            repeatMission: document.getElementById('repeatMissionSection'),
+            singleContact: document.getElementById('singleContactSection'),
+            singleAttachments: document.getElementById('singleAttachmentsSection')
+        };
+
+        // Field elements for requirement toggling
+        const singleFields = {
+            siteArea: document.getElementById('siteArea'),
+            missionName: document.getElementById('missionName'),
+            missionType: document.getElementById('missionType'),
+            missionDate: document.getElementById('missionDate'),
+            missionPriority: document.getElementById('missionPriority'),
+            submitterName: document.getElementById('submitterName'),
+            submitterEmail: document.getElementById('submitterEmail')
+        };
+
+        const repeatFields = {
+            date: document.getElementById('repeatMissionDate'),
+            priority: document.getElementById('repeatMissionPriority'),
+            name: document.getElementById('repeatSubmitterName'),
+            email: document.getElementById('repeatSubmitterEmail')
+        };
 
         if (type === 'single') {
             // Show single request sections
-            if (singleRequestSections) {
-                singleRequestSections.style.display = 'block';
-                singleRequestSections.classList.remove('hidden-section');
-            }
-            if (repeatMissionSection) {
-                repeatMissionSection.style.display = 'none';
-                repeatMissionSection.classList.add('hidden-section');
-            }
-            if (singleContactSection) {
-                singleContactSection.style.display = 'block';
-                singleContactSection.classList.remove('hidden-section');
-            }
-            if (singleAttachmentsSection) {
-                singleAttachmentsSection.style.display = 'block';
-                singleAttachmentsSection.classList.remove('hidden-section');
-            }
+            toggleSection(sections.singleRequest, true);
+            toggleSection(sections.repeatMission, false);
+            toggleSection(sections.singleContact, true);
+            toggleSection(sections.singleAttachments, true);
 
-            // Re-enable required fields for single request
-            const siteArea = document.getElementById('siteArea');
-            const missionName = document.getElementById('missionName');
-            const missionType = document.getElementById('missionType');
-            const missionDate = document.getElementById('missionDate');
-            const missionPriority = document.getElementById('missionPriority');
-            const submitterName = document.getElementById('submitterName');
-            const submitterEmail = document.getElementById('submitterEmail');
-
-            if (siteArea) siteArea.required = true;
-            if (missionName) missionName.required = true;
-            if (missionType) missionType.required = true;
-            if (missionDate) missionDate.required = true;
-            if (missionPriority) missionPriority.required = true;
-            if (submitterName) submitterName.required = true;
-            if (submitterEmail) submitterEmail.required = true;
-
-            // Disable repeat mission fields
-            const repeatDate = document.getElementById('repeatMissionDate');
-            const repeatPriority = document.getElementById('repeatMissionPriority');
-            const repeatName = document.getElementById('repeatSubmitterName');
-            const repeatEmail = document.getElementById('repeatSubmitterEmail');
-            
-            if (repeatDate) repeatDate.required = false;
-            if (repeatPriority) repeatPriority.required = false;
-            if (repeatName) repeatName.required = false;
-            if (repeatEmail) repeatEmail.required = false;
+            // Enable single request field requirements
+            setFieldsRequired(singleFields, true);
+            setFieldsRequired(repeatFields, false);
 
         } else {
             // Show repeat mission section
-            if (singleRequestSections) {
-                singleRequestSections.style.display = 'none';
-                singleRequestSections.classList.add('hidden-section');
-            }
-            if (repeatMissionSection) {
-                repeatMissionSection.style.display = 'block';
-                repeatMissionSection.classList.remove('hidden-section');
-            }
-            if (singleContactSection) {
-                singleContactSection.style.display = 'none';
-                singleContactSection.classList.add('hidden-section');
-            }
-            if (singleAttachmentsSection) {
-                singleAttachmentsSection.style.display = 'none';
-                singleAttachmentsSection.classList.add('hidden-section');
-            }
+            toggleSection(sections.singleRequest, false);
+            toggleSection(sections.repeatMission, true);
+            toggleSection(sections.singleContact, false);
+            toggleSection(sections.singleAttachments, false);
 
-            // Disable required fields for single request
-            const siteArea = document.getElementById('siteArea');
-            const missionName = document.getElementById('missionName');
-            const missionType = document.getElementById('missionType');
-            const missionDate = document.getElementById('missionDate');
-            const missionPriority = document.getElementById('missionPriority');
-            const submitterName = document.getElementById('submitterName');
-            const submitterEmail = document.getElementById('submitterEmail');
-
-            if (siteArea) siteArea.required = false;
-            if (missionName) missionName.required = false;
-            if (missionType) missionType.required = false;
-            if (missionDate) missionDate.required = false;
-            if (missionPriority) missionPriority.required = false;
-            if (submitterName) submitterName.required = false;
-            if (submitterEmail) submitterEmail.required = false;
-
-            // Enable repeat mission fields
-            const repeatDate = document.getElementById('repeatMissionDate');
-            const repeatPriority = document.getElementById('repeatMissionPriority');
-            const repeatName = document.getElementById('repeatSubmitterName');
-            const repeatEmail = document.getElementById('repeatSubmitterEmail');
-            
-            if (repeatDate) repeatDate.required = true;
-            if (repeatPriority) repeatPriority.required = true;
-            if (repeatName) repeatName.required = true;
-            if (repeatEmail) repeatEmail.required = true;
+            // Enable repeat mission field requirements
+            setFieldsRequired(singleFields, false);
+            setFieldsRequired(repeatFields, true);
 
             // Initialize with one empty row if none exist
-            if (repeatMissionRows.length === 0) {
+            if (AppState.repeatMissionRows.length === 0) {
                 addRepeatMissionRow();
             }
         }
-
-        console.log('Toggle complete for type:', type);
     }
 
+    /**
+     * Toggles a section's visibility
+     * @param {HTMLElement} section - Section element to toggle
+     * @param {boolean} show - Whether to show or hide
+     */
+    function toggleSection(section, show) {
+        if (!section) return;
+        section.style.display = show ? 'block' : 'none';
+        section.classList.toggle('hidden-section', !show);
+    }
+
+    /**
+     * Sets required attribute on multiple fields
+     * @param {Object} fields - Object with field name keys and element values
+     * @param {boolean} required - Whether fields should be required
+     */
+    function setFieldsRequired(fields, required) {
+        Object.values(fields).forEach(field => {
+            if (field) field.required = required;
+        });
+    }
+
+    /**
+     * Gets repeat missions available for a specific site
+     * @param {string} siteKey - Site identifier
+     * @returns {Array} Array of repeat mission configurations
+     */
     function getRepeatMissionsForSite(siteKey) {
-        if (!currentCompany || !currentCompany.sites[siteKey]) {
+        if (!AppState.currentCompany?.sites[siteKey]) {
             return [];
         }
-        return currentCompany.sites[siteKey].repeatMissions || [];
+        return AppState.currentCompany.sites[siteKey].repeatMissions || [];
     }
 
+    /**
+     * Adds a new row to the repeat missions table
+     */
     function addRepeatMissionRow() {
-        const siteKey = document.getElementById('siteSelection').value;
+        const siteKey = DOMCache.siteSelection?.value;
         const missions = getRepeatMissionsForSite(siteKey);
 
         if (missions.length === 0) {
@@ -264,32 +472,47 @@
             return;
         }
 
-        // Store full mission object
-        repeatMissionRows.push({ mission: null, comment: '' });
+        AppState.repeatMissionRows.push({ mission: null, comment: '' });
         renderRepeatMissionsTable();
     }
 
+    /**
+     * Removes a row from the repeat missions table
+     * @param {number} index - Row index to remove
+     */
     function removeRepeatMissionRow(index) {
-        if (repeatMissionRows.length > 1) {
-            repeatMissionRows.splice(index, 1);
+        if (AppState.repeatMissionRows.length > 1) {
+            AppState.repeatMissionRows.splice(index, 1);
             renderRepeatMissionsTable();
         }
     }
 
+    /**
+     * Updates a field in a repeat mission row
+     * @param {number} index - Row index
+     * @param {string} field - Field name ('mission' or 'comment')
+     * @param {*} value - New value
+     */
     function updateRepeatMissionRow(index, field, value) {
-        if (repeatMissionRows[index]) {
-            repeatMissionRows[index][field] = value;
+        if (AppState.repeatMissionRows[index]) {
+            AppState.repeatMissionRows[index][field] = value;
         }
     }
 
+    /**
+     * Renders the repeat missions table with current state
+     * Dynamically generates table rows with dropdowns and inputs
+     */
     function renderRepeatMissionsTable() {
         const container = document.getElementById('repeatMissionsTableBody');
-        const siteKey = document.getElementById('siteSelection').value;
+        if (!container) return;
+
+        const siteKey = DOMCache.siteSelection?.value;
         const missions = getRepeatMissionsForSite(siteKey);
 
         container.innerHTML = '';
 
-        repeatMissionRows.forEach((row, index) => {
+        AppState.repeatMissionRows.forEach((row, index) => {
             const tr = document.createElement('tr');
             tr.className = 'repeat-mission-row';
 
@@ -301,24 +524,21 @@
 
             missions.forEach(mission => {
                 const option = document.createElement('option');
-                // Store full mission object as JSON string
                 option.value = JSON.stringify(mission);
-                option.textContent = mission.display; // Show display name
-                // Check if this is the selected mission
-                if (row.mission && row.mission.sharepoint === mission.sharepoint) {
+                option.textContent = mission.display;
+                if (row.mission?.sharepoint === mission.sharepoint) {
                     option.selected = true;
                 }
                 missionSelect.appendChild(option);
             });
 
             missionSelect.addEventListener('change', (e) => {
-                // Parse JSON to get full mission object
                 const selectedMission = e.target.value ? JSON.parse(e.target.value) : null;
                 updateRepeatMissionRow(index, 'mission', selectedMission);
             });
             missionCell.appendChild(missionSelect);
 
-            // Comment cell
+            // Comment input cell
             const commentCell = document.createElement('td');
             const commentInput = document.createElement('input');
             commentInput.type = 'text';
@@ -334,7 +554,7 @@
             const actionsCell = document.createElement('td');
             actionsCell.className = 'repeat-mission-actions';
 
-            if (repeatMissionRows.length > 1) {
+            if (AppState.repeatMissionRows.length > 1) {
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.className = 'remove-row-btn';
@@ -351,21 +571,31 @@
         });
     }
 
-    // ============================================================
-    // EVENT LISTENERS
-    // ============================================================
-    function setupEventListeners() {
-        document.getElementById('siteSelection').addEventListener('change', handleSiteChange);
+    /* ======================================================================
+       EVENT LISTENERS
+       ====================================================================== */
 
-        document.getElementById('customParams').addEventListener('change', (e) => {
-            document.getElementById('paramsSection').style.display = e.target.checked ? 'grid' : 'none';
+    /**
+     * Sets up all event listeners for the form
+     */
+    function setupEventListeners() {
+        // Site selection change
+        DOMCache.siteSelection?.addEventListener('change', handleSiteChange);
+
+        // Custom parameters toggle
+        document.getElementById('customParams')?.addEventListener('change', (e) => {
+            const paramsSection = document.getElementById('paramsSection');
+            if (paramsSection) {
+                paramsSection.style.display = e.target.checked ? 'grid' : 'none';
+            }
         });
 
+        // Frequency type toggle (Once-off vs Repeating)
         document.querySelectorAll('input[name="frequencyType"]').forEach(radio => {
             radio.addEventListener('change', handleFrequencyChange);
         });
 
-        // Request type toggle
+        // Request type toggle (Single vs Repeat Missions)
         document.querySelectorAll('input[name="requestType"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 handleRequestTypeChange(e.target.value);
@@ -373,101 +603,87 @@
         });
 
         // Add repeat mission row button
-        const addRowBtn = document.getElementById('addRepeatMissionRow');
-        if (addRowBtn) {
-            addRowBtn.addEventListener('click', addRepeatMissionRow);
-        }
+        document.getElementById('addRepeatMissionRow')?.addEventListener('click', addRepeatMissionRow);
 
+        // File upload setup
         setupFileUpload();
-        document.getElementById('missionForm').addEventListener('submit', handleSubmit);
+
+        // Form submission
+        DOMCache.form?.addEventListener('submit', handleSubmit);
     }
 
-    function handleSiteChange(e) {
-        const siteKey = e.target.value;
+    /**
+     * Handles site selection change
+     * Updates areas, map widget, and repeat mission availability
+     *
+     * @param {Event} event - Change event
+     */
+    function handleSiteChange(event) {
+        const siteKey = event.target.value;
         populateSiteAreas(siteKey);
 
         if (siteKey) {
-            currentSite = currentCompany.sites[siteKey];
+            AppState.currentSite = AppState.currentCompany.sites[siteKey];
             sendToMapWidget('changeSite', { site: siteKey });
 
-            // Check if site has repeat missions and update UI
+            // Check repeat mission availability
             const missions = getRepeatMissionsForSite(siteKey);
             const repeatOption = document.getElementById('repeatMission');
 
             if (repeatOption) {
-                // Disable repeat option if no repeat missions available
-                if (missions.length === 0) {
-                    repeatOption.disabled = true;
-                    repeatOption.parentElement.style.opacity = '0.5';
-                    repeatOption.parentElement.title = 'No repeat missions configured for this site';
+                const hasRepeatMissions = missions.length > 0;
+                repeatOption.disabled = !hasRepeatMissions;
+                repeatOption.parentElement.style.opacity = hasRepeatMissions ? '1' : '0.5';
+                repeatOption.parentElement.title = hasRepeatMissions
+                    ? ''
+                    : 'No repeat missions configured for this site';
 
-                    // If currently on repeat mode, switch to single
-                    if (requestType === 'repeat') {
-                        document.getElementById('singleRequest').checked = true;
-                        handleRequestTypeChange('single');
-                    }
-                } else {
-                    repeatOption.disabled = false;
-                    repeatOption.parentElement.style.opacity = '1';
-                    repeatOption.parentElement.title = '';
+                // Switch to single if on repeat with no missions available
+                if (!hasRepeatMissions && AppState.requestType === 'repeat') {
+                    document.getElementById('singleRequest').checked = true;
+                    handleRequestTypeChange('single');
                 }
             }
 
-            // Clear and refresh repeat mission rows when site changes
-            repeatMissionRows = [];
-            if (requestType === 'repeat') {
+            // Reset repeat mission rows when site changes
+            AppState.repeatMissionRows = [];
+            if (AppState.requestType === 'repeat') {
                 addRepeatMissionRow();
             }
         }
     }
 
-    function handleFrequencyChange(e) {
-        const isRepeating = e.target.value === 'Repeating';
+    /**
+     * Handles frequency type change (Once-off vs Repeating)
+     * @param {Event} event - Change event
+     */
+    function handleFrequencyChange(event) {
+        const isRepeating = event.target.value === 'Repeating';
         const repeatingOptions = document.getElementById('repeatingOptions');
         const repeatFrequency = document.getElementById('repeatFrequency');
 
-        repeatingOptions.style.display = isRepeating ? 'block' : 'none';
-        repeatFrequency.required = isRepeating;
-
-        if (!isRepeating) {
-            repeatFrequency.value = '';
+        if (repeatingOptions) {
+            repeatingOptions.style.display = isRepeating ? 'block' : 'none';
+        }
+        if (repeatFrequency) {
+            repeatFrequency.required = isRepeating;
+            if (!isRepeating) repeatFrequency.value = '';
         }
     }
 
-    function setDefaultDate() {
-        const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+    /* ======================================================================
+       FILE UPLOAD HANDLING
+       ====================================================================== */
 
-        // Set date for single request mode
-        const missionDate = document.getElementById('missionDate');
-        if (missionDate) {
-            missionDate.value = todayStr;
-            missionDate.min = todayStr;
-        }
-
-        // Set date for repeat mission mode
-        const repeatMissionDate = document.getElementById('repeatMissionDate');
-        if (repeatMissionDate) {
-            repeatMissionDate.value = todayStr;
-            repeatMissionDate.min = todayStr;
-        }
-    }
-
-    // ============================================================
-    // FILE UPLOAD WITH BASE64 ENCODING
-    // ============================================================
-    
     /**
-     * Convert a File object to base64 string
+     * Converts a File object to base64 string
      * @param {File} file - File to convert
-     * @returns {Promise<string>} Base64 encoded string (without data URL prefix)
+     * @returns {Promise<string>} Base64 encoded content (without data URL prefix)
      */
-    // Convert file to base64 for upload
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
-                // Remove data URL prefix (e.g., "data:image/png;base64,")
                 const base64 = reader.result.split(',')[1];
                 resolve(base64);
             };
@@ -479,114 +695,107 @@
         });
     }
 
-    // Upload file to Power Automate HTTP trigger
+    /**
+     * Uploads a file to SharePoint via Power Automate HTTP trigger
+     *
+     * @param {string} fileName - Name of the file
+     * @param {string} base64Content - Base64 encoded file content
+     * @param {string} missionRef - Mission reference for folder organization
+     * @param {string} fileType - MIME type of the file
+     * @returns {Promise<Object>} Upload result with fileId and webUrl
+     */
     async function uploadFileToPowerAutomate(fileName, base64Content, missionRef, fileType) {
-        // Check if endpoint is configured
         if (!FILE_UPLOAD_ENDPOINT || FILE_UPLOAD_ENDPOINT === 'YOUR_POWER_AUTOMATE_HTTP_URL') {
-            throw new Error('File upload endpoint not configured. Please set FILE_UPLOAD_ENDPOINT in app.js');
+            throw new Error('File upload endpoint not configured');
         }
 
-        try {
-            const response = await fetch(FILE_UPLOAD_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    fileName: fileName,
-                    fileContent: base64Content,
-                    missionRef: missionRef,
-                    fileType: fileType
-                })
-            });
+        const response = await fetch(FILE_UPLOAD_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fileName,
+                fileContent: base64Content,
+                missionRef,
+                fileType
+            })
+        });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Upload failed: ${response.status} - ${errorText}`);
-            }
-
-            const result = await response.json();
-            return result;
-
-        } catch (error) {
-            console.error('Power Automate upload error:', error);
-            throw error;
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Upload failed: ${response.status} - ${errorText}`);
         }
+
+        return response.json();
     }
 
+    /**
+     * Sets up file upload areas for both single and repeat modes
+     */
     function setupFileUpload() {
-        // Single request file upload
-        const uploadArea = document.getElementById('fileUploadArea');
-        const fileInput = document.getElementById('fileInput');
-
-        if (uploadArea && fileInput) {
-            uploadArea.addEventListener('click', () => fileInput.click());
-
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('drag-over');
-            });
-
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('drag-over');
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('drag-over');
-                handleFiles(e.dataTransfer.files);
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files);
-            });
-        }
-
-        // Repeat mission file upload
-        const repeatUploadArea = document.getElementById('repeatFileUploadArea');
-        const repeatFileInput = document.getElementById('repeatFileInput');
-
-        if (repeatUploadArea && repeatFileInput) {
-            repeatUploadArea.addEventListener('click', () => repeatFileInput.click());
-
-            repeatUploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                repeatUploadArea.classList.add('drag-over');
-            });
-
-            repeatUploadArea.addEventListener('dragleave', () => {
-                repeatUploadArea.classList.remove('drag-over');
-            });
-
-            repeatUploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                repeatUploadArea.classList.remove('drag-over');
-                handleFiles(e.dataTransfer.files, 'repeat');
-            });
-
-            repeatFileInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files, 'repeat');
-            });
-        }
+        setupSingleFileUploadArea('fileUploadArea', 'fileInput');
+        setupSingleFileUploadArea('repeatFileUploadArea', 'repeatFileInput', 'repeat');
     }
 
+    /**
+     * Configures a single file upload area with drag-and-drop
+     *
+     * @param {string} areaId - ID of the upload area element
+     * @param {string} inputId - ID of the file input element
+     * @param {string} [mode='single'] - Upload mode for rendering
+     */
+    function setupSingleFileUploadArea(areaId, inputId, mode = 'single') {
+        const uploadArea = document.getElementById(areaId);
+        const fileInput = document.getElementById(inputId);
+
+        if (!uploadArea || !fileInput) return;
+
+        // Click to open file dialog
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files, mode);
+        });
+
+        // File input change handler
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files, mode);
+        });
+    }
+
+    /**
+     * Processes uploaded files - validates, converts, and uploads to SharePoint
+     *
+     * @param {FileList} files - Files from input or drop
+     * @param {string} [mode='single'] - Upload mode for rendering
+     */
     async function handleFiles(files, mode = 'single') {
-        // Generate unique mission reference for file organization
-        const missionRef = `MR${Date.now().toString(36).toUpperCase()}`;
+        const missionRef = generateReferenceId();
 
         for (const file of Array.from(files)) {
-            // Check for duplicates
-            if (uploadedFiles.some(f => f.name === file.name)) {
+            // Skip duplicates
+            if (AppState.uploadedFiles.some(f => f.name === file.name)) {
                 console.log(`File ${file.name} already added`);
                 continue;
             }
-            
-            // Check file size (100MB limit for Power Automate)
-            if (file.size > 100 * 1024 * 1024) {
+
+            // Validate file size
+            if (file.size > MAX_FILE_SIZE_BYTES) {
                 alert(`File "${file.name}" is too large. Maximum size is 100MB per file.`);
                 continue;
             }
-            
+
             // Add file with uploading status
             const tempFile = {
                 name: file.name,
@@ -595,54 +804,62 @@
                 status: 'uploading',
                 originalFile: file
             };
-            uploadedFiles.push(tempFile);
+            AppState.uploadedFiles.push(tempFile);
             renderFileList(mode);
 
             try {
                 console.log(`Uploading ${file.name} to SharePoint...`);
 
-                // Convert to base64
                 const base64Content = await fileToBase64(file);
-                
-                // Upload to Power Automate
-                const uploadResult = await uploadFileToPowerAutomate(file.name, base64Content, missionRef, file.type);
+                const uploadResult = await uploadFileToPowerAutomate(
+                    file.name,
+                    base64Content,
+                    missionRef,
+                    file.type
+                );
 
-                // Update with success
-                const fileIndex = uploadedFiles.findIndex(f => f.name === file.name && f.status === 'uploading');
+                // Update file with success status
+                const fileIndex = AppState.uploadedFiles.findIndex(
+                    f => f.name === file.name && f.status === 'uploading'
+                );
                 if (fileIndex !== -1) {
-                    uploadedFiles[fileIndex] = {
-                        name: file.name,
-                        size: file.size,
-                        type: file.type,
+                    AppState.uploadedFiles[fileIndex] = {
+                        ...AppState.uploadedFiles[fileIndex],
                         status: 'uploaded',
                         fileId: uploadResult.fileId,
                         webUrl: uploadResult.webUrl,
-                        missionRef: uploadResult.missionRef,
-                        originalFile: file
+                        missionRef: uploadResult.missionRef
                     };
                 }
-                
+
                 console.log(`✅ ${file.name} uploaded successfully`);
 
             } catch (error) {
                 console.error(`Failed to upload file ${file.name}:`, error);
 
-                // Update with error status
-                const fileIndex = uploadedFiles.findIndex(f => f.name === file.name && f.status === 'uploading');
+                // Update file with error status
+                const fileIndex = AppState.uploadedFiles.findIndex(
+                    f => f.name === file.name && f.status === 'uploading'
+                );
                 if (fileIndex !== -1) {
-                    uploadedFiles[fileIndex].status = 'error';
-                    uploadedFiles[fileIndex].error = error.message;
+                    AppState.uploadedFiles[fileIndex].status = 'error';
+                    AppState.uploadedFiles[fileIndex].error = error.message;
                 }
 
-                alert(`Failed to upload "${file.name}": ${error.message}\n\nPlease try again or contact support if the issue persists.`);
+                alert(`Failed to upload "${file.name}": ${error.message}`);
             }
 
             renderFileList(mode);
         }
     }
 
+    /**
+     * Renders the file list UI with status indicators
+     * Updates both single and repeat file list elements
+     *
+     * @param {string} [mode='single'] - Current upload mode
+     */
     function renderFileList(mode = 'single') {
-        // Render to both file lists since they share the same uploadedFiles array
         const fileLists = ['fileList', 'repeatFileList'];
 
         fileLists.forEach(listId => {
@@ -651,18 +868,22 @@
 
             fileList.innerHTML = '';
 
-            uploadedFiles.forEach((file, index) => {
+            AppState.uploadedFiles.forEach((file, index) => {
                 const item = document.createElement('div');
                 item.className = `file-item ${file.status || ''}`;
 
-                // Status icon
+                // Status indicator
                 let statusIcon = '';
-                if (file.status === 'uploaded') {
-                    statusIcon = '<span style="color: var(--green); font-size: 14px; margin-left: 8px;" title="Uploaded successfully">✓</span>';
-                } else if (file.status === 'error') {
-                    statusIcon = '<span style="color: var(--red); font-size: 14px; margin-left: 8px;" title="Upload failed">✗</span>';
-                } else if (file.status === 'uploading') {
-                    statusIcon = '<span style="color: var(--cyan); font-size: 12px; margin-left: 8px;">Uploading...</span>';
+                switch (file.status) {
+                    case 'uploaded':
+                        statusIcon = '<span style="color: var(--green); font-size: 14px; margin-left: 8px;" title="Uploaded successfully">✓</span>';
+                        break;
+                    case 'error':
+                        statusIcon = '<span style="color: var(--red); font-size: 14px; margin-left: 8px;" title="Upload failed">✗</span>';
+                        break;
+                    case 'uploading':
+                        statusIcon = '<span style="color: var(--cyan); font-size: 12px; margin-left: 8px;">Uploading...</span>';
+                        break;
                 }
 
                 item.innerHTML = `
@@ -687,137 +908,92 @@
             });
         });
 
-        // Setup remove handlers
+        // Attach remove handlers
         document.querySelectorAll('.file-item-remove').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = parseInt(e.currentTarget.dataset.index);
-                uploadedFiles.splice(index, 1);
+                AppState.uploadedFiles.splice(index, 1);
                 renderFileList();
             });
         });
     }
 
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
+    /* ======================================================================
+       FORM VALIDATION
+       ====================================================================== */
 
-    // ============================================================
-    // FORM SUBMISSION
-    // ============================================================
-    function formatDateYYMMDD(dateStr) {
-        const date = new Date(dateStr);
-        const yy = date.getFullYear().toString().slice(-2);
-        const mm = String(date.getMonth() + 1).padStart(2, '0');
-        const dd = String(date.getDate()).padStart(2, '0');
-        return `${yy}${mm}${dd}`;
-    }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-
-        if (isSubmitting) return;
-
-        if (!document.getElementById('siteSelection').value) {
-            alert('Please select a site.');
-            return;
-        }
-
-        // Check EmailJS configuration
-        if (!EMAILJS_CONFIG.publicKey || EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY') {
-            alert('EmailJS is not configured. Please update EMAILJS_CONFIG in config.js');
-            return;
-        }
-
-        isSubmitting = true;
-
-        const submitBtn = document.getElementById('submitBtn');
-        const btnText = submitBtn.querySelector('.btn-text');
-        const btnLoading = submitBtn.querySelector('.btn-loading');
-
-        btnText.style.display = 'none';
-        btnLoading.style.display = 'inline-flex';
-        submitBtn.disabled = true;
-
-        try {
-            // Validate form first
-            validateForm();
-
-            const formData = collectFormData();
-            console.log('Form data collected:', formData);
-            
-            const refId = await sendViaEmailJS(formData);
-
-            // Show mission title in success modal
-            document.getElementById('missionId').textContent = formData.Title;
-            document.getElementById('successModal').style.display = 'flex';
-
-        } catch (error) {
-            console.error('Submission error:', error);
-            document.getElementById('errorMessage').textContent = error.message || 'An error occurred while submitting your request.';
-            document.getElementById('errorModal').style.display = 'flex';
-        } finally {
-            btnText.style.display = 'inline';
-            btnLoading.style.display = 'none';
-            submitBtn.disabled = false;
-            isSubmitting = false;
-        }
-    }
-
-    // Form validation function
+    /**
+     * Validates the form based on current request type
+     * @throws {Error} Validation error with descriptive message
+     */
     function validateForm() {
-        const form = document.getElementById('missionForm');
+        if (AppState.requestType === 'repeat') {
+            validateRepeatMissionForm();
+        } else {
+            validateSingleRequestForm();
+        }
+    }
 
-        // For repeat missions, only validate essential fields
-        if (requestType === 'repeat') {
-            // Check site selection
-            if (!document.getElementById('siteSelection').value) {
-                throw new Error('Please select a site');
-            }
-
-            // Check at least one mission is selected
-            const validMissions = repeatMissionRows.filter(row => row.mission && row.mission.sharepoint);
-            if (validMissions.length === 0) {
-                throw new Error('Please select at least one repeat mission');
-            }
-
-            // Check date (using repeat-specific field)
-            const repeatDate = document.getElementById('repeatMissionDate');
-            if (!repeatDate || !repeatDate.value) {
-                throw new Error('Please select a mission date');
-            }
-
-            const selectedDate = new Date(repeatDate.value);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (selectedDate < today) {
-                throw new Error('Scheduled date cannot be in the past');
-            }
-
-            // Check priority
-            const repeatPriority = document.getElementById('repeatMissionPriority');
-            if (!repeatPriority || !repeatPriority.value) {
-                throw new Error('Please select a priority');
-            }
-
-            // Check contact info (using repeat-specific fields)
-            const repeatName = document.getElementById('repeatSubmitterName');
-            const repeatEmail = document.getElementById('repeatSubmitterEmail');
-
-            if (!repeatName || !repeatName.value) {
-                throw new Error('Your name is required');
-            }
-            if (!repeatEmail || !repeatEmail.value) {
-                throw new Error('Email is required');
-            }
-
-            return;
+    /**
+     * Validates the repeat mission form fields
+     * @throws {Error} Validation error with descriptive message
+     */
+    function validateRepeatMissionForm() {
+        // Site selection
+        if (!DOMCache.siteSelection?.value) {
+            throw new Error('Please select a site');
         }
 
-        // Basic HTML5 validation for single request
-        if (!form.checkValidity()) {
-            const invalidField = form.querySelector(':invalid');
+        // At least one mission selected
+        const validMissions = AppState.repeatMissionRows.filter(
+            row => row.mission?.sharepoint
+        );
+        if (validMissions.length === 0) {
+            throw new Error('Please select at least one repeat mission');
+        }
+
+        // Date validation
+        const repeatDate = document.getElementById('repeatMissionDate');
+        if (!repeatDate?.value) {
+            throw new Error('Please select a mission date');
+        }
+
+        const selectedDate = new Date(repeatDate.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate < today) {
+            throw new Error('Scheduled date cannot be in the past');
+        }
+
+        // Priority validation
+        const repeatPriority = document.getElementById('repeatMissionPriority');
+        if (!repeatPriority?.value || !VALID_PRIORITIES.includes(repeatPriority.value)) {
+            throw new Error('Please select a valid priority (1-5)');
+        }
+
+        // Contact info validation
+        const repeatName = document.getElementById('repeatSubmitterName');
+        const repeatEmail = document.getElementById('repeatSubmitterEmail');
+
+        if (!repeatName?.value) {
+            throw new Error('Your name is required');
+        }
+        if (!repeatEmail?.value) {
+            throw new Error('Email is required');
+        }
+        if (!isValidEmail(repeatEmail.value)) {
+            throw new Error('Please enter a valid email address');
+        }
+    }
+
+    /**
+     * Validates the single request form fields
+     * @throws {Error} Validation error with descriptive message
+     */
+    function validateSingleRequestForm() {
+        // HTML5 validation
+        if (!DOMCache.form.checkValidity()) {
+            const invalidField = DOMCache.form.querySelector(':invalid');
             if (invalidField) {
                 invalidField.focus();
                 invalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -825,169 +1001,178 @@
             throw new Error('Please fill in all required fields correctly.');
         }
 
-        // Additional custom validation
-        const missionDate = document.getElementById('missionDate').value;
+        // Date validation
+        const missionDate = document.getElementById('missionDate')?.value;
         const selectedDate = new Date(missionDate);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         if (selectedDate < today) {
-            document.getElementById('missionDate').focus();
+            document.getElementById('missionDate')?.focus();
             throw new Error('Scheduled date cannot be in the past');
         }
 
-        // Validate custom parameters if enabled
-        if (document.getElementById('customParams').checked) {
-            const resolution = document.getElementById('imageResolution').value;
-            if (resolution && (resolution < 0.5 || resolution > 20)) {
-                document.getElementById('imageResolution').focus();
-                throw new Error('Image Resolution must be between 0.5 and 20 cm/px');
-            }
-
-            const height = document.getElementById('missionHeight').value;
-            if (height && (height < 30 || height > 400)) {
-                document.getElementById('missionHeight').focus();
-                throw new Error('Mission Height must be between 30 and 400 meters');
-            }
-
-            const forwardOverlap = document.getElementById('overlapForward').value;
-            if (forwardOverlap && (forwardOverlap < 50 || forwardOverlap > 95)) {
-                document.getElementById('overlapForward').focus();
-                throw new Error('Forward Overlap must be between 50% and 95%');
-            }
-
-            const sideOverlap = document.getElementById('overlapSide').value;
-            if (sideOverlap && (sideOverlap < 50 || sideOverlap > 95)) {
-                document.getElementById('overlapSide').focus();
-                throw new Error('Side Overlap must be between 50% and 95%');
-            }
+        // Custom parameters validation
+        if (document.getElementById('customParams')?.checked) {
+            validateCustomParameters();
         }
 
-        // Validate file sizes
-        uploadedFiles.forEach(file => {
-            if (file.size > 5 * 1024 * 1024) {
-                throw new Error(`File "${file.name}" is too large. Maximum size is 5MB.`);
-            }
-        });
+        // Email format validation
+        const email = document.getElementById('submitterEmail')?.value;
+        if (email && !isValidEmail(email)) {
+            document.getElementById('submitterEmail')?.focus();
+            throw new Error('Please enter a valid email address');
+        }
     }
 
-    function collectFormData() {
-        const form = document.getElementById('missionForm');
-        const siteName = currentSite ? currentSite.name : form.siteSelection.value;
-        // Ensure hasAttachments is always a boolean
-        const hasAttachments = Boolean(uploadedFiles.length > 0 || (currentKmlData && currentKmlData.length > 0));
-
-        // Helper to safely get form field value
-        const getFieldValue = (fieldName, defaultValue = '') => {
-            const field = form.elements[fieldName];
-            return field ? field.value : defaultValue;
-        };
-
-        // Handle Repeat Mission request type
-        if (requestType === 'repeat') {
-            // Filter out empty rows
-            const validMissions = repeatMissionRows.filter(row => row.mission && row.mission.sharepoint);
-
-            if (validMissions.length === 0) {
-                throw new Error('Please select at least one repeat mission');
-            }
-
-            // Use repeat-specific field IDs
-            const repeatDate = document.getElementById('repeatMissionDate');
-            const repeatName = document.getElementById('repeatSubmitterName');
-            const repeatEmail = document.getElementById('repeatSubmitterEmail');
-            const repeatPhone = document.getElementById('repeatContactNumber');
-            const repeatPriority = document.getElementById('repeatMissionPriority');
-
-            const dateFormatted = formatDateYYMMDD(repeatDate.value);
-
-            const data = {
-                RequestType: 'Repeat Mission',
-                ScheduledDate: repeatDate ? repeatDate.value : '',
-                Company: currentCompany.name,
-                Site: siteName,
-                SiteKey: getFieldValue('siteSelection'),
-                Priority: repeatPriority ? repeatPriority.value : '3', // String for SharePoint Choice field
-                RequestedBy: repeatName ? repeatName.value : '',
-                EmailContact: repeatEmail ? repeatEmail.value : '',
-                PhContact: repeatPhone ? repeatPhone.value : '',
-                Attachment: hasAttachments, // Boolean: true/false
-                AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
-                SubmittedAt: new Date().toISOString(),
-
-                // Include KML content if available (usually small enough)
-                HasKML: Boolean(currentKmlData && currentKmlData.length > 0), // Boolean
-                KMLContent: currentKmlData || '',
-
-                // Include uploaded file references (files already uploaded to SharePoint)
-                UploadedFileRefs: uploadedFiles
-                    .filter(f => f.status === 'uploaded') // Only successfully uploaded files
-                    .map(f => ({
-                        name: f.name,
-                        fileId: f.fileId,
-                        webUrl: f.webUrl,
-                        missionRef: f.missionRef
-                    })),
-
-                // Repeat missions array with full SharePoint field data
-                RepeatMissions: validMissions.map((row, index) => ({
-                    Title: row.mission.sharepoint,
-                    MissionName: row.mission.sharepoint,
-                    DisplayName: row.mission.display,
-                    Comment: row.comment || '',
-                    SiteOrder: index + 1,
-                    Dock: row.mission.dock || '',
-                    PlannedFlightTime: row.mission.plannedFlightTime || null,
-                    MissionPlan: 'New Request',
-                    JobStatus: 'Incomplete',
-                    MissionType: row.mission.missionType || 'Survey'
-                })),
-
-                // Summary for title
-                Title: `${dateFormatted} ${getFieldValue('siteSelection')} Repeat Missions (${validMissions.length})`.trim()
-            };
-
-            // Validate repeat mission data
-            validateRepeatFormData(data);
-
-            console.log('Repeat mission data:', data);
-            return data;
+    /**
+     * Validates custom flight parameters if enabled
+     * @throws {Error} Validation error with descriptive message
+     */
+    function validateCustomParameters() {
+        const resolution = document.getElementById('imageResolution')?.value;
+        if (resolution && (resolution < 0.5 || resolution > 20)) {
+            document.getElementById('imageResolution')?.focus();
+            throw new Error('Image Resolution must be between 0.5 and 20 cm/px');
         }
 
-        // Handle Single Request type
+        const height = document.getElementById('missionHeight')?.value;
+        if (height && (height < 30 || height > 400)) {
+            document.getElementById('missionHeight')?.focus();
+            throw new Error('Mission Height must be between 30 and 400 meters');
+        }
+
+        const forwardOverlap = document.getElementById('overlapForward')?.value;
+        if (forwardOverlap && (forwardOverlap < 50 || forwardOverlap > 95)) {
+            document.getElementById('overlapForward')?.focus();
+            throw new Error('Forward Overlap must be between 50% and 95%');
+        }
+
+        const sideOverlap = document.getElementById('overlapSide')?.value;
+        if (sideOverlap && (sideOverlap < 50 || sideOverlap > 95)) {
+            document.getElementById('overlapSide')?.focus();
+            throw new Error('Side Overlap must be between 50% and 95%');
+        }
+    }
+
+    /* ======================================================================
+       DATA COLLECTION
+       ====================================================================== */
+
+    /**
+     * Collects and structures form data for submission
+     * @returns {Object} Structured form data ready for EmailJS
+     * @throws {Error} If validation fails
+     */
+    function collectFormData() {
+        const form = DOMCache.form;
+        const siteName = AppState.currentSite?.name || form.siteSelection.value;
+        const hasAttachments = Boolean(
+            AppState.uploadedFiles.length > 0 ||
+            (AppState.currentKmlData && AppState.currentKmlData.length > 0)
+        );
+
+        if (AppState.requestType === 'repeat') {
+            return collectRepeatMissionData(siteName, hasAttachments);
+        }
+        return collectSingleRequestData(form, siteName, hasAttachments);
+    }
+
+    /**
+     * Collects data for repeat mission submission
+     *
+     * @param {string} siteName - Name of the selected site
+     * @param {boolean} hasAttachments - Whether files or KML are attached
+     * @returns {Object} Structured repeat mission data
+     */
+    function collectRepeatMissionData(siteName, hasAttachments) {
+        const validMissions = AppState.repeatMissionRows.filter(
+            row => row.mission?.sharepoint
+        );
+
+        if (validMissions.length === 0) {
+            throw new Error('Please select at least one repeat mission');
+        }
+
+        const repeatDate = document.getElementById('repeatMissionDate');
+        const repeatName = document.getElementById('repeatSubmitterName');
+        const repeatEmail = document.getElementById('repeatSubmitterEmail');
+        const repeatPhone = document.getElementById('repeatContactNumber');
+        const repeatPriority = document.getElementById('repeatMissionPriority');
+
+        const dateFormatted = formatDateYYMMDD(repeatDate.value);
+
+        return {
+            RequestType: 'Repeat Mission',
+            Title: `${dateFormatted} ${getFieldValue('siteSelection')} Repeat Missions (${validMissions.length})`.trim(),
+            ScheduledDate: repeatDate?.value || '',
+            Company: AppState.currentCompany.name,
+            Site: siteName,
+            SiteKey: getFieldValue('siteSelection'),
+            Priority: repeatPriority?.value || '3',
+            RequestedBy: repeatName?.value || '',
+            EmailContact: repeatEmail?.value || '',
+            PhContact: repeatPhone?.value || '',
+            Attachment: hasAttachments,
+            AttachmentNames: AppState.uploadedFiles.map(f => f.name).join(', ') || 'None',
+            SubmittedAt: new Date().toISOString(),
+            HasKML: Boolean(AppState.currentKmlData?.length > 0),
+            KMLContent: AppState.currentKmlData || '',
+            UploadedFileRefs: getUploadedFileRefs(),
+            RepeatMissions: validMissions.map((row, index) => ({
+                Title: row.mission.sharepoint,
+                MissionName: row.mission.sharepoint,
+                DisplayName: row.mission.display,
+                Comment: row.comment || '',
+                SiteOrder: index + 1,
+                Dock: row.mission.dock || '',
+                PlannedFlightTime: row.mission.plannedFlightTime || null,
+                MissionPlan: 'New Request',
+                JobStatus: 'Incomplete',
+                MissionType: row.mission.missionType || 'Survey'
+            }))
+        };
+    }
+
+    /**
+     * Collects data for single request submission
+     *
+     * @param {HTMLFormElement} form - The form element
+     * @param {string} siteName - Name of the selected site
+     * @param {boolean} hasAttachments - Whether files or KML are attached
+     * @returns {Object} Structured single request data
+     */
+    function collectSingleRequestData(form, siteName, hasAttachments) {
         const dateFormatted = formatDateYYMMDD(form.missionDate.value);
         const frequencyType = document.querySelector('input[name="frequencyType"]:checked');
-        const isRepeating = frequencyType && frequencyType.value === 'Repeating';
+        const isRepeating = frequencyType?.value === 'Repeating';
 
         let frequency = 'Once';
-        if (isRepeating && form.repeatFrequency && form.repeatFrequency.value) {
+        if (isRepeating && form.repeatFrequency?.value) {
             frequency = form.repeatFrequency.value;
         }
 
+        // Normalize mission type for SharePoint
         const missionTypeVal = (form.missionType.value || '').trim();
-
-        // Normalize SharePoint-friendly mission type
-        const missionTypeForForm = (() => {
-          const map = {
+        const missionTypeMap = {
             'Survey - Nadir (standard mapping survey)': 'Survey',
             'Survey - Oblique': 'Survey',
             'Inspection': 'Inspection',
             'Panorama': 'Panoramic',
             'Stockpile': 'Stockpile',
             'Progress Monitoring': 'Progress Monitoring'
-          };
-          return map[missionTypeVal] || missionTypeVal || 'Other';
-        })();
+        };
+        const missionTypeForForm = missionTypeMap[missionTypeVal] || missionTypeVal || 'Other';
 
-        // Build SharePoint-ready data object
+        const hasCustomParams = form.customParams?.checked;
+
         const data = {
-            // === SHAREPOINT FIELDS ===
             RequestType: 'Single Request',
             Title: `${dateFormatted} ${getFieldValue('siteSelection')} ${getFieldValue('siteArea')} ${getFieldValue('missionName')}`.trim(),
             ScheduledDate: getFieldValue('missionDate'),
-            Company: currentCompany.name,
+            Company: AppState.currentCompany.name,
             Site: siteName,
-            Priority: getFieldValue('missionPriority') || '3', // String for SharePoint Choice field
+            Priority: getFieldValue('missionPriority') || '3',
             MissionType: missionTypeForForm,
             Frequency: frequency,
             MissionPlan: 'New Request',
@@ -997,148 +1182,139 @@
             RequestedBy: getFieldValue('submitterName'),
             EmailContact: getFieldValue('submitterEmail'),
             PhContact: getFieldValue('contactNumber'),
-            Attachment: hasAttachments, // Boolean: true/false
-            CustomerParameters: Boolean(form.customParams && form.customParams.checked), // Boolean
-
-            // Custom parameters (only if enabled)
-            Resolution: form.customParams && form.customParams.checked && getFieldValue('imageResolution') ? parseFloat(getFieldValue('imageResolution')) : null,
-            HeightAGL: form.customParams && form.customParams.checked && getFieldValue('missionHeight') ? parseInt(getFieldValue('missionHeight')) : null,
-            SideOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapSide') ? parseInt(getFieldValue('overlapSide')) : null,
-            ForwardOverlap: form.customParams && form.customParams.checked && getFieldValue('overlapForward') ? parseInt(getFieldValue('overlapForward')) : null,
-            TerrainFollow: form.customParams && form.customParams.checked ? getFieldValue('terrainFollowing') : '',
-            ElevOpt: form.customParams && form.customParams.checked ? getFieldValue('elevationOptimisation') : '',
-
-            // === METADATA ===
+            Attachment: hasAttachments,
+            CustomerParameters: Boolean(hasCustomParams),
             SiteArea: getFieldValue('siteArea'),
             SiteKey: getFieldValue('siteSelection'),
             SubmittedAt: new Date().toISOString(),
-
-            // File names only
-            AttachmentNames: uploadedFiles.map(f => f.name).join(', ') || 'None',
-            
-            // Include actual KML content (usually small enough for EmailJS)
-            HasKML: Boolean(currentKmlData && currentKmlData.length > 0), // Boolean
-            KMLContent: currentKmlData || '',
-
-            // Include uploaded file references (files already uploaded to SharePoint)
-            UploadedFileRefs: uploadedFiles
-                .filter(f => f.status === 'uploaded') // Only successfully uploaded files
-                .map(f => ({
-                    name: f.name,
-                    fileId: f.fileId,
-                    webUrl: f.webUrl,
-                    missionRef: f.missionRef
-                }))
+            AttachmentNames: AppState.uploadedFiles.map(f => f.name).join(', ') || 'None',
+            HasKML: Boolean(AppState.currentKmlData?.length > 0),
+            KMLContent: AppState.currentKmlData || '',
+            UploadedFileRefs: getUploadedFileRefs()
         };
 
-        // Validate data types according to schema
-        validateFormData(data);
+        // Add custom parameters if enabled
+        if (hasCustomParams) {
+            const resolution = getFieldValue('imageResolution');
+            const height = getFieldValue('missionHeight');
+            const sideOverlap = getFieldValue('overlapSide');
+            const forwardOverlap = getFieldValue('overlapForward');
 
-        // Remove null values for cleaner JSON
+            if (resolution) data.Resolution = parseFloat(resolution);
+            if (height) data.HeightAGL = parseInt(height);
+            if (sideOverlap) data.SideOverlap = parseInt(sideOverlap);
+            if (forwardOverlap) data.ForwardOverlap = parseInt(forwardOverlap);
+            data.TerrainFollow = getFieldValue('terrainFollowing');
+            data.ElevOpt = getFieldValue('elevationOptimisation');
+        }
+
+        // Remove empty values for cleaner JSON
         Object.keys(data).forEach(key => {
             if (data[key] === null || data[key] === undefined || data[key] === '') {
                 delete data[key];
             }
         });
 
-        console.log('Single request data:', data);
         return data;
     }
 
-    // Validation for repeat mission form
-    function validateRepeatFormData(data) {
-        if (!data.ScheduledDate) {
-            throw new Error('Scheduled date is required');
-        }
-        if (!data.RequestedBy) {
-            throw new Error('Your name is required');
-        }
-        if (!data.EmailContact) {
-            throw new Error('Email is required');
-        }
-        
-        // Validate priority
-        const validPriorities = ['1', '2', '3', '4', '5'];
-        if (!data.Priority || !validPriorities.includes(data.Priority)) {
-            throw new Error('Please select a valid priority (1-5)');
-        }
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(data.EmailContact)) {
-            throw new Error('Please enter a valid email address');
-        }
-
-        const selectedDate = new Date(data.ScheduledDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (selectedDate < today) {
-            throw new Error('Scheduled date cannot be in the past');
-        }
-
-        return true;
+    /**
+     * Gets references to successfully uploaded files
+     * @returns {Array<Object>} Array of file reference objects
+     */
+    function getUploadedFileRefs() {
+        return AppState.uploadedFiles
+            .filter(f => f.status === 'uploaded')
+            .map(f => ({
+                name: f.name,
+                fileId: f.fileId,
+                webUrl: f.webUrl,
+                missionRef: f.missionRef
+            }));
     }
 
-    // Add validation function for single request
-    function validateFormData(data) {
-        // Validate required fields
-        const requiredFields = ['Title', 'ScheduledDate', 'Company', 'Site', 'Priority', 'MissionType', 'RequestedBy', 'EmailContact'];
-        requiredFields.forEach(field => {
-            if (!data[field]) {
-                throw new Error(`${field} is required`);
-            }
-        });
+    /* ======================================================================
+       FORM SUBMISSION
+       ====================================================================== */
 
-        // Validate data types
-        const validPriorities = ['1', '2', '3', '4', '5'];
-        if (data.Priority && !validPriorities.includes(data.Priority)) {
-            throw new Error('Priority must be between 1 and 5');
+    /**
+     * Handles form submission
+     * Validates, collects data, and sends via EmailJS
+     *
+     * @param {Event} event - Submit event
+     */
+    async function handleSubmit(event) {
+        event.preventDefault();
+
+        // Prevent double submission
+        if (AppState.isSubmitting) return;
+
+        // Require site selection
+        if (!DOMCache.siteSelection?.value) {
+            alert('Please select a site.');
+            return;
         }
 
-        if (data.PlannedFlightTime && typeof data.PlannedFlightTime !== 'number') {
-            throw new Error('Planned Flight Time must be a number');
+        // Verify EmailJS configuration
+        if (!EMAILJS_CONFIG.publicKey || EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY') {
+            alert('EmailJS is not configured. Please update EMAILJS_CONFIG in config.js');
+            return;
         }
 
-        if (data.Resolution && typeof data.Resolution !== 'number') {
-            throw new Error('Resolution must be a number');
-        }
+        AppState.isSubmitting = true;
+        setSubmitButtonLoading(true);
 
-        if (data.HeightAGL && !Number.isInteger(data.HeightAGL)) {
-            throw new Error('Height AGL must be an integer');
-        }
+        try {
+            validateForm();
+            const formData = collectFormData();
+            console.log('Form data collected:', formData);
 
-        if (data.SideOverlap && !Number.isInteger(data.SideOverlap)) {
-            throw new Error('Side Overlap must be an integer');
-        }
+            await sendViaEmailJS(formData);
 
-        if (data.ForwardOverlap && !Number.isInteger(data.ForwardOverlap)) {
-            throw new Error('Forward Overlap must be an integer');
-        }
+            // Show success modal with mission title
+            document.getElementById('missionId').textContent = formData.Title;
+            document.getElementById('successModal').style.display = 'flex';
 
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (data.EmailContact && !emailRegex.test(data.EmailContact)) {
-            throw new Error('Please enter a valid email address');
-        }
+        } catch (error) {
+            console.error('Submission error:', error);
+            document.getElementById('errorMessage').textContent =
+                error.message || 'An error occurred while submitting your request.';
+            document.getElementById('errorModal').style.display = 'flex';
 
-        // Validate date is not in the past
-        const selectedDate = new Date(data.ScheduledDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (selectedDate < today) {
-            throw new Error('Scheduled date cannot be in the past');
+        } finally {
+            setSubmitButtonLoading(false);
+            AppState.isSubmitting = false;
         }
-
-        return true;
     }
 
+    /**
+     * Toggles submit button loading state
+     * @param {boolean} loading - Whether to show loading state
+     */
+    function setSubmitButtonLoading(loading) {
+        const submitBtn = DOMCache.submitBtn;
+        if (!submitBtn) return;
+
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoading = submitBtn.querySelector('.btn-loading');
+
+        if (btnText) btnText.style.display = loading ? 'none' : 'inline';
+        if (btnLoading) btnLoading.style.display = loading ? 'inline-flex' : 'none';
+        submitBtn.disabled = loading;
+    }
+
+    /**
+     * Sends form data via EmailJS
+     *
+     * @param {Object} formData - Collected form data
+     * @returns {Promise<string>} Reference ID on success
+     */
     async function sendViaEmailJS(formData) {
-        const refId = `MR-${Date.now().toString(36).toUpperCase()}`;
-
-        // Create clean JSON for Power Automate parsing
+        const refId = generateReferenceId();
         const jsonData = JSON.stringify(formData, null, 2);
 
-        // Build template params based on request type
-        let templateParams = {
+        // Build template parameters
+        const templateParams = {
             title: formData.Title,
             ref_id: refId,
             json_data: jsonData,
@@ -1150,11 +1326,8 @@
             email: formData.EmailContact,
             phone: formData.PhContact || 'Not provided',
             request_type: formData.RequestType || 'Single Request',
-            // Add KML content to template params
             kml_content: formData.KMLContent || 'No KML data provided',
             has_kml: formData.HasKML ? 'Yes' : 'No',
-            // Add attachment count
-            attachment_count: formData.AttachmentFiles ? formData.AttachmentFiles.length : 0,
             has_attachments: formData.Attachment ? 'Yes' : 'No'
         };
 
@@ -1163,8 +1336,10 @@
             templateParams.site_area = 'N/A';
             templateParams.mission_name = `${formData.RepeatMissions.length} repeat mission(s)`;
             templateParams.mission_type = 'Repeat';
-            templateParams.priority = formData.Priority || 3;
-            templateParams.repeat_missions = formData.RepeatMissions.map(m => m.DisplayName).join(', ');
+            templateParams.priority = formData.Priority || '3';
+            templateParams.repeat_missions = formData.RepeatMissions
+                .map(m => m.DisplayName)
+                .join(', ');
         } else {
             templateParams.site_area = formData.SiteArea;
             templateParams.mission_name = formData.Comments;
@@ -1172,29 +1347,28 @@
             templateParams.priority = formData.Priority;
         }
 
-        try {
-            console.log('Sending email via EmailJS...');
-            console.log('Template params:', templateParams);
-            
-            const response = await emailjs.send(
-                EMAILJS_CONFIG.serviceId,
-                EMAILJS_CONFIG.templateId,
-                templateParams
-            );
+        console.log('Sending email via EmailJS...');
+        console.log('Template params:', templateParams);
 
-            if (response.status !== 200) {
-                throw new Error(`Email send failed with status: ${response.status}`);
-            }
+        const response = await emailjs.send(
+            EMAILJS_CONFIG.serviceId,
+            EMAILJS_CONFIG.templateId,
+            templateParams
+        );
 
-            console.log('Email sent successfully:', response);
-            return refId;
-            
-        } catch (error) {
-            console.error('EmailJS send error:', error);
-            throw new Error('Failed to send email: ' + (error.text || error.message));
+        if (response.status !== 200) {
+            throw new Error(`Email send failed with status: ${response.status}`);
         }
+
+        console.log('Email sent successfully:', response);
+        return refId;
     }
 
-    // Initialize when DOM is ready
+    /* ======================================================================
+       INITIALIZATION ENTRY POINT
+       ====================================================================== */
+
+    // Initialize application when DOM is ready
     document.addEventListener('DOMContentLoaded', init);
+
 })();

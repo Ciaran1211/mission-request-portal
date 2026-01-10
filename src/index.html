@@ -1,41 +1,122 @@
 <!DOCTYPE html>
+<!--
+================================================================================
+MISSION REQUEST PORTAL - Main Entry Point
+================================================================================
+Version: 2.0.0 (Optimized)
+Last Updated: 2025-01-10
+Author: RocketDNA Development Team
+
+PURPOSE:
+--------
+Primary web interface for drone mission request submission. Supports two request
+types: Single Request (new missions with full configuration) and Repeat Missions
+(pre-configured missions scheduled for specific dates).
+
+ARCHITECTURE:
+-------------
+This application follows a modular architecture:
+- config.js    : Company/site configuration and EmailJS settings
+- app.js       : Core application logic, form handling, and submission
+- styles.css   : Responsive styling with CSS custom properties
+- map-widget.html : Embedded OpenLayers map for area drawing (iframe)
+
+DATA FLOW:
+----------
+1. User selects company via URL parameter (?company=BMA)
+2. Form populates with company-specific sites and areas
+3. User completes form with mission details
+4. On submit:
+   - Data validated client-side
+   - Files uploaded to SharePoint via Power Automate HTTP trigger
+   - Form data sent via EmailJS to trigger Power Automate flow
+   - SharePoint list item created with mission details
+
+BROWSER SUPPORT:
+----------------
+- Chrome 80+, Firefox 75+, Safari 13+, Edge 80+
+- Requires JavaScript enabled
+- Responsive design: 320px to 4K displays
+
+DEPENDENCIES:
+-------------
+- EmailJS SDK (v4) - Email sending without backend
+- DM Sans font (Google Fonts) - Typography
+- OpenLayers 8.2.0 (loaded in map-widget.html) - Map functionality
+================================================================================
+-->
 <html lang="en">
 <head>
+    <!-- ====================================================================
+         META CONFIGURATION
+         ==================================================================== -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Submit drone survey mission requests for mining operations">
+    <meta name="robots" content="noindex, nofollow">
     <title>Mission Request Portal</title>
     
-    <!-- Google Fonts -->
+    <!-- ====================================================================
+         EXTERNAL RESOURCES
+         ==================================================================== -->
+    <!-- Google Fonts - DM Sans for clean, professional typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- EmailJS SDK -->
+    <!-- EmailJS SDK - Enables client-side email sending -->
+    <!-- Initialized in app.js with public key from config.js -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     
+    <!-- Application Styles -->
     <link rel="stylesheet" href="css/styles.css">
 
-    <!-- Critical inline styles for toggle functionality -->
+    <!-- ====================================================================
+         CRITICAL INLINE STYLES
+         ====================================================================
+         These styles must load immediately to prevent flash of unstyled content
+         when toggling between Single Request and Repeat Mission modes.
+         ==================================================================== -->
     <style>
+        /* Utility class for hiding sections during mode toggle */
         .hidden-section { display: none !important; }
     </style>
 </head>
 <body>
+    <!-- ====================================================================
+         APPLICATION CONTAINER
+         ====================================================================
+         Main wrapper that provides the gradient background and centers content.
+         The gradient flows from orange (left) through cyan to navy (right).
+         ==================================================================== -->
     <div class="app-container">
-        <!-- Header -->
+        
+        <!-- ================================================================
+             HEADER SECTION
+             ================================================================
+             Displays logo and company badge. Company badge is populated
+             dynamically based on URL parameter by app.js initialization.
+             ================================================================ -->
         <header class="app-header">
             <div class="logo">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <!-- Application Logo Icon -->
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                 </svg>
                 <span>Mission Request Portal</span>
-                <span class="company-badge" id="companyBadge"></span>
+                <!-- Company Badge - Populated by JavaScript with logo or text -->
+                <span class="company-badge" id="companyBadge" aria-label="Company name"></span>
             </div>
         </header>
 
-        <!-- Invalid Company Message -->
-        <div class="error-container" id="invalidCompany" style="display: none;">
+        <!-- ================================================================
+             INVALID COMPANY ERROR STATE
+             ================================================================
+             Displayed when URL parameter is missing or invalid.
+             Hides main content and shows instructions for correct access.
+             ================================================================ -->
+        <div class="error-container" id="invalidCompany" style="display: none;" role="alert">
             <div class="error-card">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                     <circle cx="12" cy="12" r="10"/>
                     <path d="M12 8v4M12 16h.01"/>
                 </svg>
@@ -45,42 +126,62 @@
             </div>
         </div>
 
-        <!-- Main Content -->
+        <!-- ================================================================
+             MAIN CONTENT AREA
+             ================================================================
+             Contains the mission request form with all sections.
+             Visibility controlled by JavaScript based on company validation.
+             ================================================================ -->
         <main class="main-content" id="mainContent">
-            <form id="missionForm" class="mission-form">
+            <form id="missionForm" class="mission-form" novalidate>
                 
-                <!-- Section 1: Site Selection & Request Type -->
-                <section class="form-section">
-                    <h2 class="section-title">
-                        <span class="section-number">1</span>
+                <!-- ========================================================
+                     SECTION 1: SITE SELECTION & REQUEST TYPE
+                     ========================================================
+                     First step in the form flow. User selects:
+                     - Site (populated from company config)
+                     - Request type (Single or Repeat)
+                     
+                     The request type toggle controls which subsequent
+                     sections are visible.
+                     ======================================================== -->
+                <section class="form-section" aria-labelledby="section1-title">
+                    <h2 class="section-title" id="section1-title">
+                        <span class="section-number" aria-hidden="true">1</span>
                         Site & Request Type
                     </h2>
                     
+                    <!-- Site Selection Dropdown -->
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="siteSelection">Site *</label>
-                            <select id="siteSelection" name="siteSelection" required>
+                            <label for="siteSelection">Site <span aria-label="required">*</span></label>
+                            <select id="siteSelection" name="siteSelection" required aria-required="true">
                                 <option value="">Select a site...</option>
+                                <!-- Options populated dynamically by app.js -->
                             </select>
                         </div>
                     </div>
 
-                    <!-- Request Type Toggle -->
+                    <!-- Request Type Toggle - Radio Button Style -->
                     <div class="request-type-section" style="margin-top: 20px;">
-                        <label style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 10px; display: block;">Request Type *</label>
-                        <div class="request-type-toggle">
+                        <label id="requestTypeLabel" style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 10px; display: block;">
+                            Request Type <span aria-label="required">*</span>
+                        </label>
+                        <div class="request-type-toggle" role="radiogroup" aria-labelledby="requestTypeLabel">
+                            <!-- Single Request Option (Default) -->
                             <input type="radio" id="singleRequest" name="requestType" value="single" checked>
                             <label for="singleRequest" class="toggle-option">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                                     <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
                                 </svg>
                                 Single Request
                             </label>
 
+                            <!-- Repeat Mission Option -->
                             <input type="radio" id="repeatMission" name="requestType" value="repeat">
                             <label for="repeatMission" class="toggle-option">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path d="M17 2l4 4-4 4"/>
                                     <path d="M3 11v-1a4 4 0 014-4h14"/>
                                     <path d="M7 22l-4-4 4-4"/>
@@ -92,33 +193,47 @@
                     </div>
                 </section>
 
-                <!-- Repeat Missions Section (hidden by default) -->
-                <section class="form-section" id="repeatMissionSection" style="display: none;">
-                    <h2 class="section-title">
-                        <span class="section-number">2</span>
+                <!-- ========================================================
+                     SECTION: REPEAT MISSIONS (Conditional)
+                     ========================================================
+                     Only visible when "Repeat Missions" request type selected.
+                     Allows selection of pre-configured missions from a table.
+                     
+                     Features:
+                     - Dynamic table with add/remove rows
+                     - Mission dropdown populated from site config
+                     - Optional KML reference/comment per mission
+                     - Shared date, priority, and contact fields
+                     ======================================================== -->
+                <section class="form-section" id="repeatMissionSection" style="display: none;" aria-labelledby="section-repeat-title">
+                    <h2 class="section-title" id="section-repeat-title">
+                        <span class="section-number" aria-hidden="true">2</span>
                         Select Repeat Missions
                     </h2>
 
                     <p class="section-description" style="color: var(--gray-600); margin-bottom: 16px;">
-                        Select the repeat missions you want to request for the scheduled date. Add a KML reference or comment for each mission if needed.
+                        Select the repeat missions you want to request for the scheduled date. 
+                        Add a KML reference or comment for each mission if needed.
                     </p>
 
+                    <!-- Repeat Missions Table Container -->
                     <div class="repeat-missions-table-container">
-                        <table class="repeat-missions-table">
+                        <table class="repeat-missions-table" aria-label="Selected repeat missions">
                             <thead>
                                 <tr>
-                                    <th>Mission</th>
-                                    <th>KML Reference / Comment</th>
-                                    <th></th>
+                                    <th scope="col">Mission</th>
+                                    <th scope="col">KML Reference / Comment</th>
+                                    <th scope="col"><span class="sr-only">Actions</span></th>
                                 </tr>
                             </thead>
                             <tbody id="repeatMissionsTableBody">
-                                <!-- Rows added dynamically -->
+                                <!-- Rows added dynamically by app.js -->
                             </tbody>
                         </table>
 
+                        <!-- Add Row Button -->
                         <button type="button" class="add-row-btn" id="addRepeatMissionRow">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10"/>
                                 <path d="M12 8v8M8 12h8"/>
                             </svg>
@@ -126,19 +241,19 @@
                         </button>
                     </div>
 
-                    <!-- Schedule for Repeat Missions -->
+                    <!-- Schedule Subsection for Repeat Missions -->
                     <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(10, 186, 239, 0.2);">
                         <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--navy);">Schedule</h3>
 
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="repeatMissionDate">Required Mission Date *</label>
-                                <input type="date" id="repeatMissionDate" name="repeatMissionDate" required>
+                                <label for="repeatMissionDate">Required Mission Date <span aria-label="required">*</span></label>
+                                <input type="date" id="repeatMissionDate" name="repeatMissionDate" required aria-required="true">
                             </div>
 
                             <div class="form-group">
-                                <label for="repeatMissionPriority">Mission Priority *</label>
-                                <select id="repeatMissionPriority" name="repeatMissionPriority" required>
+                                <label for="repeatMissionPriority">Mission Priority <span aria-label="required">*</span></label>
+                                <select id="repeatMissionPriority" name="repeatMissionPriority" required aria-required="true">
                                     <option value="">Select priority...</option>
                                     <option value="1">1</option>
                                     <option value="2">2</option>
@@ -147,17 +262,18 @@
                                     <option value="5">5</option>
                                 </select>
 
-                                <!-- Priority Help Button & Tooltip -->
+                                <!-- Priority Help Tooltip (Repeat) -->
                                 <div class="priority-help-container">
-                                    <button type="button" class="priority-help-button" id="repeatPriorityHelpButton">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <button type="button" class="priority-help-button" id="repeatPriorityHelpButton" aria-expanded="false" aria-controls="repeatPriorityTooltip">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                             <circle cx="12" cy="12" r="10"/>
                                             <path d="M12 16v-4M12 8h.01"/>
                                         </svg>
                                         Show priority breakdown
                                     </button>
 
-                                    <div class="priority-tooltip" id="repeatPriorityTooltip">
+                                    <!-- Priority Guidelines Tooltip -->
+                                    <div class="priority-tooltip" id="repeatPriorityTooltip" role="tooltip">
                                         <div class="priority-guidelines">
                                             <div class="guideline-item">
                                                 <div class="priority-header">
@@ -200,7 +316,7 @@
                                             </div>
 
                                             <div class="priority-tip">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                                     <circle cx="12" cy="12" r="10"/>
                                                     <path d="M12 16v-4M12 8h.01"/>
                                                 </svg>
@@ -213,21 +329,21 @@
                         </div>
                     </div>
 
-                    <!-- Contact for Repeat Missions -->
+                    <!-- Contact Information for Repeat Missions -->
                     <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(10, 186, 239, 0.2);">
                         <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--navy);">Contact Information</h3>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="repeatSubmitterName">Your Name *</label>
-                                <input type="text" id="repeatSubmitterName" name="repeatSubmitterName">
+                                <label for="repeatSubmitterName">Your Name <span aria-label="required">*</span></label>
+                                <input type="text" id="repeatSubmitterName" name="repeatSubmitterName" autocomplete="name">
                             </div>
                             <div class="form-group">
-                                <label for="repeatSubmitterEmail">Email *</label>
-                                <input type="email" id="repeatSubmitterEmail" name="repeatSubmitterEmail">
+                                <label for="repeatSubmitterEmail">Email <span aria-label="required">*</span></label>
+                                <input type="email" id="repeatSubmitterEmail" name="repeatSubmitterEmail" autocomplete="email">
                             </div>
                             <div class="form-group">
                                 <label for="repeatContactNumber">Contact Number</label>
-                                <input type="tel" id="repeatContactNumber" name="repeatContactNumber" placeholder="+61 4XX XXX XXX">
+                                <input type="tel" id="repeatContactNumber" name="repeatContactNumber" placeholder="+61 4XX XXX XXX" autocomplete="tel">
                             </div>
                         </div>
                     </div>
@@ -235,316 +351,376 @@
                     <!-- File Upload for Repeat Missions -->
                     <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(10, 186, 239, 0.2);">
                         <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--navy);">Attachments</h3>
-                        <div class="file-upload-area" id="repeatFileUploadArea">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <div class="file-upload-area" id="repeatFileUploadArea" role="button" tabindex="0" aria-label="Upload files by clicking or dragging">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
                             </svg>
                             <p>Drag and drop files here, or <span class="browse-link">browse</span></p>
                             <p class="file-types">Supports: KML, KMZ, PDF, Images</p>
-                            <input type="file" id="repeatFileInput" name="repeatAttachments" multiple accept=".kml,.kmz,.pdf,.png,.jpg,.jpeg" hidden>
+                            <input type="file" id="repeatFileInput" name="repeatAttachments" multiple accept=".kml,.kmz,.pdf,.png,.jpg,.jpeg" hidden aria-hidden="true">
                         </div>
-                        <div class="file-list" id="repeatFileList"></div>
+                        <div class="file-list" id="repeatFileList" role="list" aria-label="Uploaded files"></div>
                     </div>
                 </section>
 
-                <!-- Single Request Sections (wrapped in container) -->
+                <!-- ========================================================
+                     SINGLE REQUEST SECTIONS CONTAINER
+                     ========================================================
+                     Contains all sections specific to Single Request mode.
+                     Hidden when Repeat Missions is selected.
+                     ======================================================== -->
                 <div id="singleRequestSections">
-                    <!-- Section: Site Area & Map -->
-                    <section class="form-section">
-                        <h2 class="section-title">
-                            <span class="section-number">2</span>
+                    
+                    <!-- ====================================================
+                         SECTION 2: MISSION AREA (Map)
+                         ====================================================
+                         Allows user to:
+                         - Select a site area from dropdown
+                         - Draw mission area on embedded map widget
+                         
+                         The map widget is loaded in an iframe and
+                         communicates via postMessage API.
+                         ==================================================== -->
+                    <section class="form-section" aria-labelledby="section2-title">
+                        <h2 class="section-title" id="section2-title">
+                            <span class="section-number" aria-hidden="true">2</span>
                             Mission Area
                         </h2>
 
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="siteArea">Site Area *</label>
-                                <select id="siteArea" name="siteArea" required>
+                                <label for="siteArea">Site Area <span aria-label="required">*</span></label>
+                                <select id="siteArea" name="siteArea" required aria-required="true">
                                     <option value="">Select site first...</option>
+                                    <!-- Options populated based on site selection -->
                                 </select>
                             </div>
                         </div>
 
-                        <!-- Map Widget (embedded iframe) -->
+                        <!-- Map Widget (Embedded iframe) -->
                         <div class="map-section">
                             <h3>Draw Mission Area</h3>
-                            <p class="map-instructions">Use the drawing tools to outline your mission area on the map. Select a site first to load the correct location.</p>
+                            <p class="map-instructions">
+                                Use the drawing tools to outline your mission area on the map. 
+                                Select a site first to load the correct location.
+                            </p>
 
                             <div class="map-widget-container">
                                 <iframe
                                     id="mapWidgetFrame"
                                     src="map-widget.html"
-                                    frameborder="0"
-                                    allowfullscreen
+                                    title="Map drawing tool for mission area"
+                                    loading="lazy"
+                                    aria-label="Interactive map for drawing mission boundaries"
                                 ></iframe>
                             </div>
                         </div>
                     </section>
 
-                    <!-- Section: Mission Details -->
-                    <section class="form-section">
-                        <h2 class="section-title">
-                            <span class="section-number">3</span>
+                    <!-- ====================================================
+                         SECTION 3: MISSION DETAILS
+                         ====================================================
+                         Core mission configuration:
+                         - Mission name and type
+                         - Description/comments
+                         - Optional custom flight parameters
+                         ==================================================== -->
+                    <section class="form-section" aria-labelledby="section3-title">
+                        <h2 class="section-title" id="section3-title">
+                            <span class="section-number" aria-hidden="true">3</span>
                             Mission Details
                         </h2>
                     
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="missionName">Mission Name *</label>
-                            <input type="text" id="missionName" name="missionName" placeholder="Enter mission name" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="missionType">Mission Type *</label>
-                            <select id="missionType" name="missionType" required>
-                                <option value="">Select type...</option>
-                                <option value="Survey - Nadir (standard mapping survey)">Survey - Nadir (standard mapping)</option>
-                                <option value="Survey - Oblique">Survey - Oblique</option>
-                                <option value="Inspection">Inspection</option>
-                                <option value="Panorama">Panorama</option>
-                                <option value="Stockpile">Stockpile</option>
-                                <option value="Progress Monitoring">Progress Monitoring</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group full-width">
-                            <label for="customerComment">Description</label>
-                            <textarea id="customerComment" name="customerComment" rows="3" placeholder="Describe your mission requirements..."></textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- Custom Parameters Toggle -->
-                    <div class="custom-params-section">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="customParams" name="customParams">
-                            <span class="checkbox-custom"></span>
-                            Specify custom flight parameters
-                        </label>
-                        
-                        <div class="params-grid" id="paramsSection" style="display: none;">
+                        <div class="form-grid">
                             <div class="form-group">
-                                <label for="imageResolution">Image Resolution (cm/px)</label>
-                                <input type="number" id="imageResolution" name="imageResolution" step="0.1" min="0.5" max="20" placeholder="e.g., 2.5">
+                                <label for="missionName">Mission Name <span aria-label="required">*</span></label>
+                                <input type="text" id="missionName" name="missionName" placeholder="Enter mission name" required aria-required="true">
                             </div>
+                            
                             <div class="form-group">
-                                <label for="missionHeight">Mission Height (m AGL)</label>
-                                <input type="number" id="missionHeight" name="missionHeight" step="1" min="30" max="400" placeholder="e.g., 100">
-                            </div>
-                            <div class="form-group">
-                                <label for="overlapForward">Forward Overlap (%)</label>
-                                <input type="number" id="overlapForward" name="overlapForward" step="1" min="50" max="95" placeholder="e.g., 75">
-                            </div>
-                            <div class="form-group">
-                                <label for="overlapSide">Side Overlap (%)</label>
-                                <input type="number" id="overlapSide" name="overlapSide" step="1" min="50" max="95" placeholder="e.g., 65">
-                            </div>
-                            <div class="form-group">
-                                <label for="terrainFollowing">Terrain Follow</label>
-                                <select id="terrainFollowing" name="terrainFollowing">
-                                    <option value="">Select...</option>
-                                    <option value="Yes">Yes</option>
-                                    <option value="No">No</option>
+                                <label for="missionType">Mission Type <span aria-label="required">*</span></label>
+                                <select id="missionType" name="missionType" required aria-required="true">
+                                    <option value="">Select type...</option>
+                                    <option value="Survey - Nadir (standard mapping survey)">Survey - Nadir (standard mapping)</option>
+                                    <option value="Survey - Oblique">Survey - Oblique</option>
+                                    <option value="Inspection">Inspection</option>
+                                    <option value="Panorama">Panorama</option>
+                                    <option value="Stockpile">Stockpile</option>
+                                    <option value="Progress Monitoring">Progress Monitoring</option>
                                 </select>
                             </div>
+                            
+                            <div class="form-group full-width">
+                                <label for="customerComment">Description</label>
+                                <textarea id="customerComment" name="customerComment" rows="3" placeholder="Describe your mission requirements..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Flight Parameters Toggle -->
+                        <div class="custom-params-section">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="customParams" name="customParams" aria-controls="paramsSection">
+                                <span class="checkbox-custom" aria-hidden="true"></span>
+                                Specify custom flight parameters
+                            </label>
+                            
+                            <!-- Parameters Grid (Initially Hidden) -->
+                            <div class="params-grid" id="paramsSection" style="display: none;" aria-expanded="false">
+                                <div class="form-group">
+                                    <label for="imageResolution">Image Resolution (cm/px)</label>
+                                    <input type="number" id="imageResolution" name="imageResolution" step="0.1" min="0.5" max="20" placeholder="e.g., 2.5">
+                                </div>
+                                <div class="form-group">
+                                    <label for="missionHeight">Mission Height (m AGL)</label>
+                                    <input type="number" id="missionHeight" name="missionHeight" step="1" min="30" max="400" placeholder="e.g., 100">
+                                </div>
+                                <div class="form-group">
+                                    <label for="overlapForward">Forward Overlap (%)</label>
+                                    <input type="number" id="overlapForward" name="overlapForward" step="1" min="50" max="95" placeholder="e.g., 75">
+                                </div>
+                                <div class="form-group">
+                                    <label for="overlapSide">Side Overlap (%)</label>
+                                    <input type="number" id="overlapSide" name="overlapSide" step="1" min="50" max="95" placeholder="e.g., 65">
+                                </div>
+                                <div class="form-group">
+                                    <label for="terrainFollowing">Terrain Follow</label>
+                                    <select id="terrainFollowing" name="terrainFollowing">
+                                        <option value="">Select...</option>
+                                        <option value="Yes">Yes</option>
+                                        <option value="No">No</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="elevationOptimisation">Elevation Optimisation</label>
+                                    <select id="elevationOptimisation" name="elevationOptimisation">
+                                        <option value="">Select...</option>
+                                        <option value="Yes">Yes</option>
+                                        <option value="No">No</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ====================================================
+                         SECTION 4: FREQUENCY
+                         ====================================================
+                         Determines if this is a one-time or recurring mission.
+                         If recurring, user selects the repeat frequency.
+                         ==================================================== -->
+                    <section class="form-section" aria-labelledby="section4-title">
+                        <h2 class="section-title" id="section4-title">
+                            <span class="section-number" aria-hidden="true">4</span>
+                            Frequency
+                        </h2>
+
+                        <div class="request-type-toggle" role="radiogroup" aria-label="Mission frequency">
+                            <input type="radio" id="onceOff" name="frequencyType" value="Once-off" checked>
+                            <label for="onceOff" class="toggle-option">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                                Once-off
+                            </label>
+
+                            <input type="radio" id="repeating" name="frequencyType" value="Repeating">
+                            <label for="repeating" class="toggle-option">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path d="M17 2l4 4-4 4"/>
+                                    <path d="M3 11v-1a4 4 0 014-4h14"/>
+                                    <path d="M7 22l-4-4 4-4"/>
+                                    <path d="M21 13v1a4 4 0 01-4 4H3"/>
+                                </svg>
+                                Repeating
+                            </label>
+                        </div>
+
+                        <!-- Repeat Frequency Options (Initially Hidden) -->
+                        <div class="repeating-options" id="repeatingOptions" style="display: none;">
                             <div class="form-group">
-                                <label for="elevationOptimisation">Elevation Optimisation</label>
-                                <select id="elevationOptimisation" name="elevationOptimisation">
-                                    <option value="">Select...</option>
-                                    <option value="Yes">Yes</option>
-                                    <option value="No">No</option>
+                                <label for="repeatFrequency">Repeat Frequency <span aria-label="required">*</span></label>
+                                <select id="repeatFrequency" name="repeatFrequency">
+                                    <option value="">Select frequency...</option>
+                                    <option value="Daily">Daily</option>
+                                    <option value="Weekly">Weekly</option>
+                                    <option value="Fortnightly">Fortnightly</option>
+                                    <option value="Monthly">Monthly</option>
+                                    <option value="Quarterly">Quarterly</option>
                                 </select>
                             </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
 
-                <!-- Section 4: Frequency -->
-                <section class="form-section">
-                    <h2 class="section-title">
-                        <span class="section-number">4</span>
-                        Frequency
-                    </h2>
+                    <!-- ====================================================
+                         SECTION 5: SCHEDULE
+                         ====================================================
+                         Date and priority selection for the mission.
+                         Priority tooltip explains the 1-5 scale.
+                         ==================================================== -->
+                    <section class="form-section" aria-labelledby="section5-title">
+                        <h2 class="section-title" id="section5-title">
+                            <span class="section-number" aria-hidden="true">5</span>
+                            Schedule
+                        </h2>
 
-                    <div class="request-type-toggle">
-                        <input type="radio" id="onceOff" name="frequencyType" value="Once-off" checked>
-                        <label for="onceOff" class="toggle-option">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <path d="M12 6v6l4 2"/>
-                            </svg>
-                            Once-off
-                        </label>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="missionDate">Scheduled Date <span aria-label="required">*</span></label>
+                                <input type="date" id="missionDate" name="missionDate" required aria-required="true">
+                            </div>
 
-                        <input type="radio" id="repeating" name="frequencyType" value="Repeating">
-                        <label for="repeating" class="toggle-option">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17 2l4 4-4 4"/>
-                                <path d="M3 11v-1a4 4 0 014-4h14"/>
-                                <path d="M7 22l-4-4 4-4"/>
-                                <path d="M21 13v1a4 4 0 01-4 4H3"/>
-                            </svg>
-                            Repeating
-                        </label>
-                    </div>
+                            <div class="form-group">
+                                <label for="missionPriority">Mission Priority <span aria-label="required">*</span></label>
+                                <select id="missionPriority" name="missionPriority" required aria-required="true">
+                                    <option value="">Select priority...</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3" selected>3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                </select>
 
-                    <div class="repeating-options" id="repeatingOptions" style="display: none;">
-                        <div class="form-group">
-                            <label for="repeatFrequency">Repeat Frequency *</label>
-                            <select id="repeatFrequency" name="repeatFrequency">
-                                <option value="">Select frequency...</option>
-                                <option value="Daily">Daily</option>
-                                <option value="Weekly">Weekly</option>
-                                <option value="Fortnightly">Fortnightly</option>
-                                <option value="Monthly">Monthly</option>
-                                <option value="Quarterly">Quarterly</option>
-                            </select>
-                        </div>
-                    </div>
-                </section>
+                                <!-- Priority Help Tooltip (Single Request) -->
+                                <div class="priority-help-container">
+                                    <button type="button" class="priority-help-button" id="priorityHelpButton" aria-expanded="false" aria-controls="priorityTooltip">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <path d="M12 16v-4M12 8h.01"/>
+                                        </svg>
+                                        Show priority breakdown
+                                    </button>
 
-                <!-- Section 5: Schedule -->
-                <section class="form-section">
-                    <h2 class="section-title">
-                        <span class="section-number">5</span>
-                        Schedule
-                    </h2>
-
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="missionDate">Scheduled Date *</label>
-                            <input type="date" id="missionDate" name="missionDate" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="missionPriority">Mission Priority *</label>
-                            <select id="missionPriority" name="missionPriority" required>
-                                <option value="">Select priority...</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3" selected>3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                            </select>
-
-                            <!-- Priority Help Button & Tooltip -->
-                            <div class="priority-help-container">
-                                <button type="button" class="priority-help-button" id="priorityHelpButton">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"/>
-                                        <path d="M12 16v-4M12 8h.01"/>
-                                    </svg>
-                                    Show priority breakdown
-                                </button>
-
-                                <div class="priority-tooltip" id="priorityTooltip">
-                                    <div class="priority-guidelines">
-                                        <div class="guideline-item">
-                                            <div class="priority-header">
-                                                <span class="priority-badge priority-1">1</span>
-                                                <span class="priority-title">Critical - Within 30 minutes</span>
+                                    <!-- Priority Guidelines Tooltip -->
+                                    <div class="priority-tooltip" id="priorityTooltip" role="tooltip">
+                                        <div class="priority-guidelines">
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-1">1</span>
+                                                    <span class="priority-title">Critical - Within 30 minutes</span>
+                                                </div>
+                                                <p class="priority-description">Urgent missions required ASAP for operational reasons or time-dependent missions (e.g., blast surveys, emergency response).</p>
                                             </div>
-                                            <p class="priority-description">Urgent missions required ASAP for operational reasons or time-dependent missions (e.g., blast surveys, emergency response).</p>
-                                        </div>
 
-                                        <div class="guideline-item">
-                                            <div class="priority-header">
-                                                <span class="priority-badge priority-2">2</span>
-                                                <span class="priority-title">High - Within 4 hours</span>
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-2">2</span>
+                                                    <span class="priority-title">High - Within 4 hours</span>
+                                                </div>
+                                                <p class="priority-description">To be completed within 4 hours. Add time requirement in comments (e.g., Daily panoramic flights, semi-urgent unscheduled jobs).</p>
                                             </div>
-                                            <p class="priority-description">To be completed within 4 hours. Add time requirement in comments (e.g., Daily panoramic flights, semi-urgent unscheduled jobs).</p>
-                                        </div>
 
-                                        <div class="guideline-item">
-                                            <div class="priority-header">
-                                                <span class="priority-badge priority-3">3</span>
-                                                <span class="priority-title">Medium - Before 13:00</span>
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-3">3</span>
+                                                    <span class="priority-title">Medium - Before 13:00</span>
+                                                </div>
+                                                <p class="priority-description">Ideally complete before 13:00. For survey flights that require processing due that day.</p>
                                             </div>
-                                            <p class="priority-description">Ideally complete before 13:00. For survey flights that require processing due that day.</p>
-                                        </div>
 
-                                        <div class="guideline-item">
-                                            <div class="priority-header">
-                                                <span class="priority-badge priority-4">4</span>
-                                                <span class="priority-title">Low - By end of day</span>
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-4">4</span>
+                                                    <span class="priority-title">Low - By end of day</span>
+                                                </div>
+                                                <p class="priority-description">Can be completed by end of day. Standard missions without same-day processing requirements.</p>
                                             </div>
-                                            <p class="priority-description">Can be completed by end of day. Standard missions without same-day processing requirements.</p>
-                                        </div>
 
-                                        <div class="guideline-item">
-                                            <div class="priority-header">
-                                                <span class="priority-badge priority-5">5</span>
-                                                <span class="priority-title">Flexible - Next day</span>
+                                            <div class="guideline-item">
+                                                <div class="priority-header">
+                                                    <span class="priority-badge priority-5">5</span>
+                                                    <span class="priority-title">Flexible - Next day</span>
+                                                </div>
+                                                <p class="priority-description">Not urgent. Can be completed the next day. For planning and non-time-sensitive missions.</p>
                                             </div>
-                                            <p class="priority-description">Not urgent. Can be completed the next day. For planning and non-time-sensitive missions.</p>
-                                        </div>
 
-                                        <div class="priority-tip">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <circle cx="12" cy="12" r="10"/>
-                                                <path d="M12 16v-4M12 8h.01"/>
-                                            </svg>
-                                            <p class="priority-tip-text">When selecting Priority 2, please specify the required completion time in the mission description.</p>
+                                            <div class="priority-tip">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                    <circle cx="12" cy="12" r="10"/>
+                                                    <path d="M12 16v-4M12 8h.01"/>
+                                                </svg>
+                                                <p class="priority-tip-text">When selecting Priority 2, please specify the required completion time in the mission description.</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
                 </div><!-- End singleRequestSections -->
 
-                <!-- Section: Contact (for Single Request mode - outside singleRequestSections because of field requirements) -->
-                <section class="form-section" id="singleContactSection">
-                    <h2 class="section-title">
-                        <span class="section-number">6</span>
+                <!-- ========================================================
+                     SECTION 6: CONTACT INFORMATION (Single Request)
+                     ========================================================
+                     Placed outside singleRequestSections for proper
+                     visibility toggle handling between modes.
+                     ======================================================== -->
+                <section class="form-section" id="singleContactSection" aria-labelledby="section6-title">
+                    <h2 class="section-title" id="section6-title">
+                        <span class="section-number" aria-hidden="true">6</span>
                         Contact Information
                     </h2>
                     
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="submitterName">Your Name *</label>
-                            <input type="text" id="submitterName" name="submitterName" required>
+                            <label for="submitterName">Your Name <span aria-label="required">*</span></label>
+                            <input type="text" id="submitterName" name="submitterName" required aria-required="true" autocomplete="name">
                         </div>
                         <div class="form-group">
-                            <label for="submitterEmail">Email *</label>
-                            <input type="email" id="submitterEmail" name="submitterEmail" required>
+                            <label for="submitterEmail">Email <span aria-label="required">*</span></label>
+                            <input type="email" id="submitterEmail" name="submitterEmail" required aria-required="true" autocomplete="email">
                         </div>
                         <div class="form-group">
                             <label for="contactNumber">Contact Number</label>
-                            <input type="tel" id="contactNumber" name="contactNumber" placeholder="+61 4XX XXX XXX">
+                            <input type="tel" id="contactNumber" name="contactNumber" placeholder="+61 4XX XXX XXX" autocomplete="tel">
                         </div>
                     </div>
                 </section>
 
-                <!-- Section: File Upload (for Single Request mode) -->
-                <section class="form-section" id="singleAttachmentsSection">
-                    <h2 class="section-title">
-                        <span class="section-number">7</span>
+                <!-- ========================================================
+                     SECTION 7: ATTACHMENTS (Single Request)
+                     ========================================================
+                     File upload area with drag-and-drop support.
+                     Files are uploaded to SharePoint via Power Automate.
+                     ======================================================== -->
+                <section class="form-section" id="singleAttachmentsSection" aria-labelledby="section7-title">
+                    <h2 class="section-title" id="section7-title">
+                        <span class="section-number" aria-hidden="true">7</span>
                         Attachments
                     </h2>
                     
-                    <div class="file-upload-area" id="fileUploadArea">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <div class="file-upload-area" id="fileUploadArea" role="button" tabindex="0" aria-label="Upload files by clicking or dragging">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
                         </svg>
                         <p>Drag and drop files here, or <span class="browse-link">browse</span></p>
                         <p class="file-types">Supports: KML, KMZ, PDF, Images, Shapefiles</p>
-                        <input type="file" id="fileInput" name="attachments" multiple accept=".kml,.kmz,.pdf,.png,.jpg,.jpeg,.shp,.zip" hidden>
+                        <input type="file" id="fileInput" name="attachments" multiple accept=".kml,.kmz,.pdf,.png,.jpg,.jpeg,.shp,.zip" hidden aria-hidden="true">
                     </div>
                     
-                    <div class="file-list" id="fileList"></div>
+                    <div class="file-list" id="fileList" role="list" aria-label="Uploaded files"></div>
                 </section>
 
-                <!-- Hidden Fields -->
+                <!-- ========================================================
+                     HIDDEN FIELDS
+                     ========================================================
+                     Store data that doesn't have visible form controls:
+                     - kmlData: KML string from map widget
+                     - companyId: Company key from URL parameter
+                     ======================================================== -->
                 <input type="hidden" id="kmlData" name="kmlData">
                 <input type="hidden" id="companyId" name="companyId">
 
-                <!-- Submit -->
+                <!-- ========================================================
+                     FORM ACTIONS
+                     ========================================================
+                     Submit button with loading state for async submission.
+                     ======================================================== -->
                 <div class="form-actions">
                     <button type="submit" class="submit-btn" id="submitBtn">
                         <span class="btn-text">Submit Mission Request</span>
-                        <span class="btn-loading" style="display: none;">
-                            <svg class="spinner" viewBox="0 0 24 24">
+                        <span class="btn-loading" style="display: none;" aria-hidden="true">
+                            <svg class="spinner" viewBox="0 0 24 24" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="60" stroke-linecap="round"/>
                             </svg>
                             Submitting...
@@ -554,47 +730,73 @@
             </form>
         </main>
 
-        <!-- Success Modal -->
-        <div class="modal-overlay" id="successModal" style="display: none;">
+        <!-- ================================================================
+             SUCCESS MODAL
+             ================================================================
+             Displayed after successful form submission.
+             Shows mission title/ID and offers to submit another request.
+             ================================================================ -->
+        <div class="modal-overlay" id="successModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="successModalTitle">
             <div class="modal success-modal">
-                <div class="modal-icon success">
+                <div class="modal-icon success" aria-hidden="true">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
                         <path d="M22 4L12 14.01l-3-3"/>
                     </svg>
                 </div>
-                <h2>Mission Request Submitted!</h2>
+                <h2 id="successModalTitle">Mission Request Submitted!</h2>
                 <p>Your request has been successfully added to the schedule.</p>
                 <p class="mission-id">Mission: <span id="missionId"></span></p>
                 <button type="button" class="modal-btn" onclick="location.reload()">Submit Another Request</button>
             </div>
         </div>
 
-        <!-- Error Modal -->
-        <div class="modal-overlay" id="errorModal" style="display: none;">
+        <!-- ================================================================
+             ERROR MODAL
+             ================================================================
+             Displayed when form submission fails.
+             Shows error message and allows retry.
+             ================================================================ -->
+        <div class="modal-overlay" id="errorModal" style="display: none;" role="alertdialog" aria-modal="true" aria-labelledby="errorModalTitle">
             <div class="modal error-modal">
-                <div class="modal-icon error">
+                <div class="modal-icon error" aria-hidden="true">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
                         <path d="M15 9l-6 6M9 9l6 6"/>
                     </svg>
                 </div>
-                <h2>Submission Failed</h2>
+                <h2 id="errorModalTitle">Submission Failed</h2>
                 <p id="errorMessage">An error occurred while submitting your request.</p>
                 <button type="button" class="modal-btn" onclick="document.getElementById('errorModal').style.display='none'">Try Again</button>
             </div>
         </div>
     </div>
 
-    <!-- Config must be loaded before app.js -->
+    <!-- ====================================================================
+         JAVASCRIPT MODULES
+         ====================================================================
+         Load order is important:
+         1. config.js - Must load first (defines COMPANY_CONFIG, EMAILJS_CONFIG)
+         2. app.js - Depends on config.js constants
+         ==================================================================== -->
     <script src="js/config.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Inline fallback for request type toggle -->
+    <!-- ====================================================================
+         INLINE FALLBACK SCRIPTS
+         ====================================================================
+         These provide backup functionality in case external JS has issues.
+         They handle critical UI interactions that should work immediately.
+         ==================================================================== -->
+    
+    <!-- Request Type Toggle - Fallback Handler -->
     <script>
-        // Fallback toggle handler in case external JS doesn't load
+        /**
+         * Fallback toggle handler for request type switching.
+         * This runs if the external app.js fails to load or has errors.
+         * Ensures basic form functionality is maintained.
+         */
         document.addEventListener('DOMContentLoaded', function() {
-            // Request type toggle - inline backup
             const singleRadio = document.getElementById('singleRequest');
             const repeatRadio = document.getElementById('repeatMission');
 
@@ -622,94 +824,78 @@
             if (singleRadio) singleRadio.addEventListener('change', toggleRequestType);
             if (repeatRadio) repeatRadio.addEventListener('change', toggleRequestType);
 
-            // Run once on load to set initial state
+            // Set initial state on page load
             toggleRequestType();
         });
     </script>
 
-    <!-- Priority Tooltip Scripts -->
+    <!-- Priority Tooltip - Interactive Behavior -->
     <script>
+        /**
+         * Priority tooltip functionality for both Single Request and Repeat Missions.
+         * Handles click-to-toggle, click-outside-to-close, and escape key behavior.
+         * Also shows tooltip automatically when Priority 2 is selected.
+         */
         document.addEventListener('DOMContentLoaded', function() {
-            // Priority tooltip functionality for SINGLE REQUEST
-            const priorityHelpButton = document.getElementById('priorityHelpButton');
-            const priorityTooltip = document.getElementById('priorityTooltip');
+            
+            /**
+             * Sets up tooltip behavior for a button/tooltip pair.
+             * @param {string} buttonId - ID of the toggle button
+             * @param {string} tooltipId - ID of the tooltip element
+             * @param {string} selectId - ID of the priority select (optional, for auto-show on Priority 2)
+             */
+            function setupPriorityTooltip(buttonId, tooltipId, selectId) {
+                const button = document.getElementById(buttonId);
+                const tooltip = document.getElementById(tooltipId);
+                
+                if (!button || !tooltip) return;
 
-            if (priorityHelpButton && priorityTooltip) {
                 // Toggle tooltip on button click
-                priorityHelpButton.addEventListener('click', function(e) {
+                button.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    priorityTooltip.classList.toggle('show');
+                    const isShown = tooltip.classList.toggle('show');
+                    button.setAttribute('aria-expanded', isShown);
                 });
 
-                // Close tooltip when clicking outside
+                // Close when clicking outside
                 document.addEventListener('click', function(e) {
-                    if (!priorityHelpButton.contains(e.target) && !priorityTooltip.contains(e.target)) {
-                        priorityTooltip.classList.remove('show');
+                    if (!button.contains(e.target) && !tooltip.contains(e.target)) {
+                        tooltip.classList.remove('show');
+                        button.setAttribute('aria-expanded', 'false');
                     }
                 });
 
-                // Close tooltip on escape key
+                // Close on escape key
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape') {
-                        priorityTooltip.classList.remove('show');
+                        tooltip.classList.remove('show');
+                        button.setAttribute('aria-expanded', 'false');
                     }
                 });
 
-                // Optional: Show tooltip automatically when Priority 2 is selected
-                const missionPrioritySelect = document.getElementById('missionPriority');
-                if (missionPrioritySelect) {
-                    missionPrioritySelect.addEventListener('change', function() {
-                        if (this.value === '2' && priorityTooltip) {
-                            // Show tooltip to remind about time requirement
-                            priorityTooltip.classList.add('show');
-
-                            // Auto-hide after 8 seconds
-                            setTimeout(() => {
-                                priorityTooltip.classList.remove('show');
-                            }, 8000);
-                        }
-                    });
+                // Auto-show tooltip when Priority 2 is selected (optional enhancement)
+                if (selectId) {
+                    const select = document.getElementById(selectId);
+                    if (select) {
+                        select.addEventListener('change', function() {
+                            if (this.value === '2') {
+                                tooltip.classList.add('show');
+                                button.setAttribute('aria-expanded', 'true');
+                                
+                                // Auto-hide after 8 seconds
+                                setTimeout(function() {
+                                    tooltip.classList.remove('show');
+                                    button.setAttribute('aria-expanded', 'false');
+                                }, 8000);
+                            }
+                        });
+                    }
                 }
             }
 
-            // Priority tooltip functionality for REPEAT MISSIONS
-            const repeatPriorityHelpButton = document.getElementById('repeatPriorityHelpButton');
-            const repeatPriorityTooltip = document.getElementById('repeatPriorityTooltip');
-
-            if (repeatPriorityHelpButton && repeatPriorityTooltip) {
-                // Toggle tooltip on button click
-                repeatPriorityHelpButton.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    repeatPriorityTooltip.classList.toggle('show');
-                });
-
-                // Close tooltip when clicking outside
-                document.addEventListener('click', function(e) {
-                    if (!repeatPriorityHelpButton.contains(e.target) && !repeatPriorityTooltip.contains(e.target)) {
-                        repeatPriorityTooltip.classList.remove('show');
-                    }
-                });
-
-                // Close tooltip on escape key
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        repeatPriorityTooltip.classList.remove('show');
-                    }
-                });
-
-                // Optional: Show tooltip when Priority 2 is selected
-                const repeatPrioritySelect = document.getElementById('repeatMissionPriority');
-                if (repeatPrioritySelect) {
-                    repeatPrioritySelect.addEventListener('change', function() {
-                        if (this.value === '2' && repeatPriorityTooltip) {
-                            repeatPriorityTooltip.classList.add('show');
-                            setTimeout(() => {
-                                repeatPriorityTooltip.classList.remove('show');
-                            }, 8000);
-                        }
-                    });
-                }
-            }
+            // Initialize both priority tooltips
+            setupPriorityTooltip('priorityHelpButton', 'priorityTooltip', 'missionPriority');
+            setupPriorityTooltip('repeatPriorityHelpButton', 'repeatPriorityTooltip', 'repeatMissionPriority');
         });
     </script>
 </body>

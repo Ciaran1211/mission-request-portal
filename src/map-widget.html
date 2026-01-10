@@ -1,31 +1,97 @@
 <!DOCTYPE html>
+<!--
+================================================================================
+MAP DRAWING WIDGET - Mission Area Definition Tool
+================================================================================
+Version: 2.0.0 (Optimized)
+Last Updated: 2025-01-10
+
+PURPOSE:
+--------
+Interactive map widget for drawing mission boundaries. Embedded as an iframe
+in the main form (index.html). Provides:
+- Drawing tools: Polygon, Rectangle, Circle, Line, Point
+- Layer switching: Street map, Satellite, Site orthophoto
+- KML export for mission area data
+- Fullscreen mode for detailed work
+
+COMMUNICATION:
+--------------
+Uses postMessage API to communicate with parent form:
+- Sends: kmlData, widgetReady, featureCount
+- Receives: changeSite, getKml, submit
+
+DEPENDENCIES:
+-------------
+- OpenLayers 8.2.0 (ol.js) - Map rendering and interactions
+- DM Sans font - Typography consistency with main form
+
+SITE CONFIGURATION:
+-------------------
+Sites are defined in the SITES object with:
+- name: Display name
+- company: Parent company
+- tileUrl: Orthophoto tile server URL
+- center: [longitude, latitude]
+- defaultZoom: Initial zoom level
+================================================================================
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Map Drawing Widget</title>
     
+    <!-- ====================================================================
+         OPENLAYERS MAP LIBRARY
+         ====================================================================
+         Version 8.2.0 - Full-featured web mapping library
+         Provides: Map rendering, vector layers, drawing interactions, KML export
+         ==================================================================== -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@8.2.0/ol.css">
     <script src="https://cdn.jsdelivr.net/npm/ol@8.2.0/dist/ol.js"></script>
     
+    <!-- ====================================================================
+         WIDGET STYLES
+         ====================================================================
+         Self-contained styles for the map widget.
+         Uses same design tokens as main application for consistency.
+         ==================================================================== -->
     <style>
+        /* ================================================================
+           DESIGN TOKENS
+           ================================================================
+           Matches variables from main styles.css for visual consistency.
+           ================================================================ */
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
         
         :root {
+            /* Primary Colors */
             --navy: #0F2458;
             --blue-mid: #5381A1;
             --cyan: #0ABAEF;
             --light-bg: #E8EEF5;
+            
+            /* Accent Colors */
             --pink: #E92F8B;
             --orange: #E76F41;
             --yellow: #FEE980;
             --white: #ffffff;
             --green: #10B981;
+            
+            /* Shadows */
             --shadow-sm: 0 1px 3px rgba(15, 36, 88, 0.08);
             --shadow-lg: 0 20px 40px rgba(15, 36, 88, 0.25);
         }
         
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* ================================================================
+           BASE RESET & LAYOUT
+           ================================================================ */
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
         
         body {
             font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -35,6 +101,7 @@
             overflow: hidden;
         }
         
+        /* Main widget container - vertical flex layout */
         .widget-container {
             display: flex;
             flex-direction: column;
@@ -45,6 +112,12 @@
             transition: all 0.3s ease;
         }
 
+        /* ================================================================
+           SITE HEADER
+           ================================================================
+           Displays current site name and company.
+           Updated dynamically when site changes.
+           ================================================================ */
         .site-header {
             display: flex;
             align-items: center;
@@ -66,6 +139,12 @@
             justify-content: center;
         }
         
+        /* ================================================================
+           TOOLBAR
+           ================================================================
+           Contains drawing tools, action buttons, and layer switcher.
+           Organized into logical groups with visual separators.
+           ================================================================ */
         .toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -77,14 +156,19 @@
             flex-shrink: 0;
         }
         
+        /* Tool groups with divider */
         .toolbar-group {
             display: flex;
             gap: 4px;
             padding-right: 12px;
             border-right: 1px solid var(--light-bg);
         }
-        .toolbar-group:last-child { border-right: none; padding-right: 0; }
+        .toolbar-group:last-child { 
+            border-right: none; 
+            padding-right: 0; 
+        }
         
+        /* Tool button base styles */
         .tool-btn {
             display: inline-flex;
             align-items: center;
@@ -109,6 +193,12 @@
         .tool-btn.success:hover { background: #ecfdf5; }
         .tool-btn svg { width: 16px; height: 16px; }
         
+        /* ================================================================
+           MAP CONTAINER
+           ================================================================
+           Holds the OpenLayers map and overlay controls.
+           Fills remaining vertical space.
+           ================================================================ */
         .map-wrapper {
             position: relative;
             flex: 1;
@@ -118,8 +208,13 @@
             min-height: 300px;
         }
         
-        #map { width: 100%; height: 100%; background: #d9e4ef; }
+        #map { 
+            width: 100%; 
+            height: 100%; 
+            background: #d9e4ef; 
+        }
         
+        /* Fullscreen toggle button - top right corner */
         .map-controls {
             position: absolute;
             top: 12px;
@@ -127,10 +222,11 @@
             z-index: 100;
         }
         
+        /* Feature count overlay - bottom right */
         .map-overlay {
             position: absolute;
             bottom: 12px;
-            right: 12px; /* Changed from left: 12px to right: 12px */
+            right: 12px;
             padding: 8px 12px;
             background: rgba(255,255,255,0.95);
             backdrop-filter: blur(4px);
@@ -141,6 +237,12 @@
             z-index: 100;
         }
         
+        /* ================================================================
+           STATUS BAR
+           ================================================================
+           Shows current tool status and mouse coordinates.
+           Layer selector buttons on the right side.
+           ================================================================ */
         .status-bar {
             display: flex;
             align-items: center;
@@ -153,6 +255,7 @@
             flex-shrink: 0;
         }
         
+        /* Status indicator dot with animation */
         .status-dot {
             display: inline-block;
             width: 8px;
@@ -162,11 +265,23 @@
             margin-right: 6px;
         }
         .status-dot.ready { background: var(--cyan); }
-        .status-dot.drawing { background: var(--yellow); animation: pulse 1.5s infinite; }
+        .status-dot.drawing { 
+            background: var(--yellow); 
+            animation: pulse 1.5s infinite; 
+        }
         
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes pulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.5; } 
+        }
         
-        .layer-selector { display: flex; gap: 4px; margin-left: auto; }
+        /* Layer switcher buttons */
+        .layer-selector { 
+            display: flex; 
+            gap: 4px; 
+            margin-left: auto; 
+        }
+        
         .layer-btn {
             padding: 6px 10px;
             font-size: 11px;
@@ -177,8 +292,17 @@
             cursor: pointer;
             color: var(--navy);
         }
-        .layer-btn.active { background: var(--navy); color: var(--white); }
+        .layer-btn.active { 
+            background: var(--navy); 
+            color: var(--white); 
+        }
         
+        /* ================================================================
+           MODAL DIALOG
+           ================================================================
+           Used for confirmations (clear all, fullscreen, etc.)
+           Animated appearance with backdrop blur.
+           ================================================================ */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -193,7 +317,10 @@
             transition: opacity 0.2s, visibility 0.2s;
         }
         
-        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal-overlay.show { 
+            opacity: 1; 
+            visibility: visible; 
+        }
         
         .modal-box {
             background: var(--white);
@@ -206,10 +333,29 @@
             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
-        .modal-overlay.show .modal-box { transform: scale(1); }
-        .modal-title { font-size: 18px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
-        .modal-message { font-size: 14px; color: var(--blue-mid); margin-bottom: 24px; line-height: 1.5; }
-        .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; }
+        .modal-overlay.show .modal-box { 
+            transform: scale(1); 
+        }
+        
+        .modal-title { 
+            font-size: 18px; 
+            font-weight: 600; 
+            color: var(--navy); 
+            margin-bottom: 8px; 
+        }
+        
+        .modal-message { 
+            font-size: 14px; 
+            color: var(--blue-mid); 
+            margin-bottom: 24px; 
+            line-height: 1.5; 
+        }
+        
+        .modal-buttons { 
+            display: flex; 
+            gap: 12px; 
+            justify-content: flex-end; 
+        }
         
         .modal-btn {
             padding: 10px 20px;
@@ -221,13 +367,25 @@
             transition: background 0.15s;
         }
         
-        .modal-btn.cancel { background: var(--light-bg); color: var(--navy); }
+        .modal-btn.cancel { 
+            background: var(--light-bg); 
+            color: var(--navy); 
+        }
         .modal-btn.cancel:hover { background: #d9e4ef; }
-        .modal-btn.primary { background: var(--cyan); color: var(--white); }
+        
+        .modal-btn.primary { 
+            background: var(--cyan); 
+            color: var(--white); 
+        }
         .modal-btn.primary:hover { filter: brightness(1.1); }
-        .modal-btn.danger { background: var(--orange); color: var(--white); }
+        
+        .modal-btn.danger { 
+            background: var(--orange); 
+            color: var(--white); 
+        }
         .modal-btn.danger:hover { background: #d4623a; }
 
+        /* Fullscreen toggle button */
         .fs-toggle-btn {
             background: var(--white);
             border: none;
@@ -243,14 +401,33 @@
         }
         .fs-toggle-btn:hover { background: var(--light-bg); }
         
-        .debug-panel { display: none; padding: 10px; background: #fef9e6; color: var(--orange); font-family: monospace; font-size: 11px; margin-bottom: 10px; border-radius: 6px;}
+        /* Debug panel (hidden by default) */
+        .debug-panel { 
+            display: none; 
+            padding: 10px; 
+            background: #fef9e6; 
+            color: var(--orange); 
+            font-family: monospace; 
+            font-size: 11px; 
+            margin-bottom: 10px; 
+            border-radius: 6px;
+        }
         .debug-panel.show { display: block; }
     </style>
 </head>
 <body>
+    <!-- ====================================================================
+         WIDGET ROOT CONTAINER
+         ==================================================================== -->
     <div class="widget-container" id="widgetRoot">
+        
+        <!-- ================================================================
+             SITE HEADER
+             ================================================================
+             Shows current site context. Updated when site changes.
+             ================================================================ -->
         <div class="site-header">
-            <div class="site-icon">
+            <div class="site-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                     <circle cx="12" cy="10" r="3"/>
@@ -262,78 +439,137 @@
             </div>
         </div>
         
-        <div class="debug-panel" id="debugPanel"></div>
+        <!-- Debug panel for development (hidden in production) -->
+        <div class="debug-panel" id="debugPanel" role="log" aria-live="polite"></div>
         
-        <div class="toolbar">
-            <div class="toolbar-group">
-                <button class="tool-btn" data-tool="Polygon" title="Draw Polygon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/></svg> Polygon
+        <!-- ================================================================
+             DRAWING TOOLBAR
+             ================================================================
+             Organized into groups:
+             - Shape tools: Polygon, Rectangle, Circle
+             - Line tools: Line, Point
+             - Actions: Undo, Clear
+             - Export: Download KML
+             - Layers: Street, Satellite, Ortho
+             ================================================================ -->
+        <div class="toolbar" role="toolbar" aria-label="Drawing tools">
+            <!-- Shape Drawing Tools -->
+            <div class="toolbar-group" role="group" aria-label="Shape tools">
+                <button class="tool-btn" data-tool="Polygon" title="Draw Polygon" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/>
+                    </svg> 
+                    Polygon
                 </button>
-                <button class="tool-btn" data-tool="Box" title="Draw Rectangle">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Rectangle
+                <button class="tool-btn" data-tool="Box" title="Draw Rectangle" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    </svg> 
+                    Rectangle
                 </button>
-                <button class="tool-btn" data-tool="Circle" title="Draw Circle">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> Circle
+                <button class="tool-btn" data-tool="Circle" title="Draw Circle" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg> 
+                    Circle
                 </button>
             </div>
             
-            <div class="toolbar-group">
-                <button class="tool-btn" data-tool="LineString" title="Draw Line">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20L20 4"/><circle cx="4" cy="20" r="2" fill="currentColor"/><circle cx="20" cy="4" r="2" fill="currentColor"/></svg> Line
+            <!-- Line/Point Tools -->
+            <div class="toolbar-group" role="group" aria-label="Line and point tools">
+                <button class="tool-btn" data-tool="LineString" title="Draw Line" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M4 20L20 4"/>
+                        <circle cx="4" cy="20" r="2" fill="currentColor"/>
+                        <circle cx="20" cy="4" r="2" fill="currentColor"/>
+                    </svg> 
+                    Line
                 </button>
-                <button class="tool-btn" data-tool="Point" title="Place Point">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="8"/></svg> Point
+                <button class="tool-btn" data-tool="Point" title="Place Point" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                        <circle cx="12" cy="12" r="8"/>
+                    </svg> 
+                    Point
                 </button>
             </div>
             
-            <div class="toolbar-group">
+            <!-- Action Buttons -->
+            <div class="toolbar-group" role="group" aria-label="Edit actions">
                 <button class="tool-btn" id="undoBtn" title="Undo Last">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg> Undo
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M3 7v6h6"/>
+                        <path d="M3 13a9 9 0 1 0 3-7.7L3 7"/>
+                    </svg> 
+                    Undo
                 </button>
                 <button class="tool-btn danger" id="clearBtn" title="Clear All">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Clear
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    </svg> 
+                    Clear
                 </button>
             </div>
 
-            <div class="toolbar-group">
+            <!-- Export Button -->
+            <div class="toolbar-group" role="group" aria-label="Export">
                 <button class="tool-btn success" id="downloadBtn" title="Download KML">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> KML
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg> 
+                    KML
                 </button>
             </div>
             
-            <div class="layer-selector">
-                <button class="layer-btn" data-layer="osm">Street</button>
-                <button class="layer-btn" data-layer="satellite">Sat</button>
-                <button class="layer-btn active" data-layer="ortho" id="orthoBtn">Ortho</button>
+            <!-- Layer Selector -->
+            <div class="layer-selector" role="group" aria-label="Map layers">
+                <button class="layer-btn" data-layer="osm" aria-pressed="false">Street</button>
+                <button class="layer-btn" data-layer="satellite" aria-pressed="false">Sat</button>
+                <button class="layer-btn active" data-layer="ortho" id="orthoBtn" aria-pressed="true">Ortho</button>
             </div>
         </div>
         
+        <!-- ================================================================
+             MAP CONTAINER
+             ================================================================ -->
         <div class="map-wrapper">
-            <div id="map"></div>
+            <div id="map" role="application" aria-label="Interactive map for drawing mission areas"></div>
+            
+            <!-- Fullscreen Toggle -->
             <div class="map-controls">
-                <button class="fs-toggle-btn" id="fullscreenToggle" title="Toggle Fullscreen">
-                    <svg id="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <button class="fs-toggle-btn" id="fullscreenToggle" title="Toggle Fullscreen" aria-label="Toggle fullscreen mode">
+                    <svg id="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                     </svg>
-                    <svg id="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="display:none">
+                    <svg id="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="display:none" aria-hidden="true">
                         <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
                     </svg>
                 </button>
             </div>
-            <div class="map-overlay">
+            
+            <!-- Feature Count Overlay -->
+            <div class="map-overlay" aria-live="polite">
                 Features: <span style="font-weight:600; color:var(--cyan)" id="featureCount">0</span>
             </div>
         </div>
         
+        <!-- ================================================================
+             STATUS BAR
+             ================================================================ -->
         <div class="status-bar">
             <div style="display: flex; align-items: center;">
-                <span class="status-dot ready" id="statusDot"></span>
+                <span class="status-dot ready" id="statusDot" aria-hidden="true"></span>
                 <span id="statusText">Ready</span>
             </div>
-            <span id="coordDisplay" style="font-family: monospace;">--</span>
+            <span id="coordDisplay" style="font-family: monospace;" aria-label="Mouse coordinates">--</span>
         </div>
         
-        <div class="modal-overlay" id="genericModal">
+        <!-- ================================================================
+             CONFIRMATION MODAL
+             ================================================================ -->
+        <div class="modal-overlay" id="genericModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
             <div class="modal-box">
                 <div class="modal-title" id="modalTitle">Title</div>
                 <div class="modal-message" id="modalMessage">Message</div>
@@ -345,11 +581,26 @@
         </div>
     </div>
 
+    <!-- ====================================================================
+         MAP WIDGET JAVASCRIPT
+         ====================================================================
+         Self-contained script that:
+         1. Initializes OpenLayers map with multiple base layers
+         2. Provides drawing tools with undo/clear functionality
+         3. Generates KML from drawn features
+         4. Communicates with parent frame via postMessage
+         5. Handles site switching and fullscreen mode
+         ==================================================================== -->
     <script>
         (function() {
             'use strict';
             
-            // Site configurations - can be extended or overridden by parent
+            // ================================================================
+            // SITE CONFIGURATION
+            // ================================================================
+            // Each site has orthophoto tiles, center coordinates, and zoom level.
+            // Can be extended by parent application via postMessage.
+            // ================================================================
             const SITES = {
                 // BMA Sites
                 'SR': {
@@ -373,6 +624,7 @@
                     center: [148.19, -22.26],
                     defaultZoom: 15
                 },
+                
                 // Goldfields Sites
                 'GY': {
                     name: 'Gruyere',
@@ -381,6 +633,7 @@
                     center: [123.8552, -27.9897],
                     defaultZoom: 15
                 },
+                
                 // Norton Sites
                 'BN': {
                     name: 'Binduli North',
@@ -389,7 +642,8 @@
                     center: [121.3825, -30.775],
                     defaultZoom: 15
                 },
-                // Default fallback
+                
+                // Default fallback for overview
                 'default': {
                     name: 'Select a Site',
                     company: '',
@@ -399,26 +653,54 @@
                 }
             };
             
+            // ================================================================
+            // APPLICATION STATE
+            // ================================================================
+            // Centralized state object for all mutable values.
+            // ================================================================
             const State = {
-                map: null,
-                drawSource: null,
-                drawInteraction: null,
-                featureHistory: [],
-                site: null,
-                orthoLayer: null
+                map: null,              // OpenLayers map instance
+                drawSource: null,       // Vector source for drawn features
+                drawInteraction: null,  // Current drawing interaction
+                featureHistory: [],     // Stack for undo functionality
+                site: null,             // Current site configuration
+                orthoLayer: null        // Orthophoto tile layer
             };
 
-            // Check if embedded in parent
+            // Check if widget is embedded in parent frame
             const inIframe = window.self !== window.top;
 
-            function getUrlParam(name) { return new URLSearchParams(window.location.search).get(name); }
+            // ================================================================
+            // UTILITY FUNCTIONS
+            // ================================================================
+            
+            /**
+             * Get URL parameter value
+             * @param {string} name - Parameter name
+             * @returns {string|null} Parameter value or null
+             */
+            function getUrlParam(name) { 
+                return new URLSearchParams(window.location.search).get(name); 
+            }
+            
+            /**
+             * Log debug message (only visible when debug panel is enabled)
+             * @param {string} msg - Message to log
+             */
             function debug(msg) { 
                 const el = document.getElementById('debugPanel');
-                if (el) { el.classList.add('show'); el.innerHTML += msg + '<br>'; }
-                console.log('[Widget]', msg);
+                if (el) { 
+                    el.classList.add('show'); 
+                    el.innerHTML += msg + '<br>'; 
+                }
+                console.log('[MapWidget]', msg);
             }
 
-            // Send message to parent
+            /**
+             * Send message to parent frame via postMessage API
+             * @param {string} type - Message type identifier
+             * @param {Object} data - Additional data to send
+             */
             function sendToParent(type, data) {
                 if (inIframe) {
                     window.parent.postMessage(JSON.stringify({
@@ -429,6 +711,9 @@
                 }
             }
 
+            // ================================================================
+            // MODAL DIALOG SYSTEM
+            // ================================================================
             const Modal = {
                 el: document.getElementById('genericModal'),
                 titleEl: document.getElementById('modalTitle'),
@@ -436,12 +721,21 @@
                 confirmBtn: document.getElementById('modalConfirm'),
                 cancelBtn: document.getElementById('modalCancel'),
 
+                /**
+                 * Show modal with custom content and actions
+                 * @param {string} title - Modal title
+                 * @param {string} message - Modal message
+                 * @param {string} confirmText - Confirm button text
+                 * @param {string} type - 'primary' or 'danger'
+                 * @param {Function} onConfirm - Callback on confirm
+                 */
                 show(title, message, confirmText, type, onConfirm) {
                     this.titleEl.textContent = title;
                     this.msgEl.textContent = message;
                     this.confirmBtn.textContent = confirmText || 'Confirm';
                     this.confirmBtn.className = `modal-btn ${type === 'danger' ? 'danger' : 'primary'}`;
                     
+                    // Clone button to remove previous event listeners
                     const newConfirm = this.confirmBtn.cloneNode(true);
                     this.confirmBtn.parentNode.replaceChild(newConfirm, this.confirmBtn);
                     this.confirmBtn = newConfirm;
@@ -453,41 +747,74 @@
 
                     this.el.classList.add('show');
                 },
+                
+                /**
+                 * Hide the modal
+                 */
                 hide() {
                     this.el.classList.remove('show');
                 }
             };
 
+            // ================================================================
+            // MAP INITIALIZATION
+            // ================================================================
+            
+            /**
+             * Initialize the OpenLayers map with all layers and interactions
+             */
             function initMap() {
+                // Get site from URL or use default
                 const siteKey = getUrlParam('site') || 'default';
                 State.site = SITES[siteKey] || SITES['default'];
 
+                // Update header display
                 document.getElementById('siteName').textContent = State.site.name;
                 document.getElementById('siteInfo').textContent = State.site.company || 'Select a site to begin';
 
-                const osm = new ol.layer.Tile({ source: new ol.source.OSM(), visible: false, properties: {name: 'osm'} });
+                // Create base layers (initially hidden)
+                const osm = new ol.layer.Tile({ 
+                    source: new ol.source.OSM(), 
+                    visible: false, 
+                    properties: {name: 'osm'} 
+                });
+                
                 const satellite = new ol.layer.Tile({ 
-                    source: new ol.source.XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxZoom: 19 }), 
+                    source: new ol.source.XYZ({ 
+                        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
+                        maxZoom: 19 
+                    }), 
                     visible: false,
                     properties: {name: 'satellite'} 
                 });
                 
+                // Site-specific orthophoto layer (visible by default)
                 State.orthoLayer = new ol.layer.Tile({
-                    source: new ol.source.XYZ({ url: State.site.tileUrl, minZoom: 0, maxZoom: 21 }),
+                    source: new ol.source.XYZ({ 
+                        url: State.site.tileUrl, 
+                        minZoom: 0, 
+                        maxZoom: 21 
+                    }),
                     visible: true,
                     properties: {name: 'ortho'}
                 });
 
+                // Vector layer for drawn features
                 State.drawSource = new ol.source.Vector();
                 const drawLayer = new ol.layer.Vector({
                     source: State.drawSource,
                     style: new ol.style.Style({
                         fill: new ol.style.Fill({ color: 'rgba(10, 186, 239, 0.2)' }),
                         stroke: new ol.style.Stroke({ color: '#0ABAEF', width: 2 }),
-                        image: new ol.style.Circle({ radius: 6, fill: new ol.style.Fill({ color: '#0ABAEF' }), stroke: new ol.style.Stroke({ color: '#fff', width: 2 }) })
+                        image: new ol.style.Circle({ 
+                            radius: 6, 
+                            fill: new ol.style.Fill({ color: '#0ABAEF' }), 
+                            stroke: new ol.style.Stroke({ color: '#fff', width: 2 }) 
+                        })
                     })
                 });
 
+                // Initialize map
                 State.map = new ol.Map({
                     target: 'map',
                     layers: [osm, satellite, State.orthoLayer, drawLayer],
@@ -496,25 +823,38 @@
                         zoom: State.site.defaultZoom,
                         maxZoom: 21
                     }),
-                    controls: ol.control.defaults.defaults({ zoom: false }).extend([new ol.control.ScaleLine()])
+                    controls: ol.control.defaults.defaults({ zoom: false }).extend([
+                        new ol.control.ScaleLine()
+                    ])
                 });
 
+                // Update coordinate display on pointer move
                 State.map.on('pointermove', evt => {
                     const coords = ol.proj.toLonLat(evt.coordinate);
-                    document.getElementById('coordDisplay').textContent = `${coords[1].toFixed(5)}, ${coords[0].toFixed(5)}`;
+                    document.getElementById('coordDisplay').textContent = 
+                        `${coords[1].toFixed(5)}, ${coords[0].toFixed(5)}`;
                 });
 
+                // Update feature count on source change
                 State.drawSource.on('change', () => {
-                    document.getElementById('featureCount').textContent = State.drawSource.getFeatures().length;
-                    // Send KML to parent whenever features change
+                    document.getElementById('featureCount').textContent = 
+                        State.drawSource.getFeatures().length;
+                    // Send updated KML to parent
                     sendKmlToParent();
                 });
 
-                // Send initial KML state
+                // Send initial KML state after map loads
                 setTimeout(sendKmlToParent, 500);
             }
 
-            // Change site dynamically
+            // ================================================================
+            // SITE MANAGEMENT
+            // ================================================================
+            
+            /**
+             * Change to a different site
+             * @param {string} siteKey - Site identifier key
+             */
             function changeSite(siteKey) {
                 const newSite = SITES[siteKey];
                 if (!newSite) {
@@ -526,7 +866,7 @@
                 document.getElementById('siteName').textContent = State.site.name;
                 document.getElementById('siteInfo').textContent = State.site.company;
 
-                // Update ortho layer
+                // Update orthophoto tile source
                 State.orthoLayer.setSource(new ol.source.XYZ({ 
                     url: State.site.tileUrl, 
                     minZoom: 0, 
@@ -548,27 +888,49 @@
                 sendKmlToParent();
             }
 
-            // Send KML data to parent
-            function sendKmlToParent() {
-                const kml = generateKMLString();
-                if (inIframe) {
-                    window.parent.postMessage(JSON.stringify({
-                        type: 'kmlData',
-                        kml: kml,
-                        featureCount: State.drawSource.getFeatures().length,
-                        timestamp: new Date().toISOString()
-                    }), '*');
-                }
-            }
-
+            // ================================================================
+            // DRAWING TOOLS
+            // ================================================================
+            
+            /**
+             * Set the active drawing tool
+             * @param {string|null} toolType - Tool type or null to deactivate
+             */
             function setTool(toolType) {
-                if (State.drawInteraction) State.map.removeInteraction(State.drawInteraction);
-                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                if (!toolType) { setStatus('ready', 'Ready'); return; }
-                document.querySelector(`[data-tool="${toolType}"]`).classList.add('active');
+                // Remove existing interaction
+                if (State.drawInteraction) {
+                    State.map.removeInteraction(State.drawInteraction);
+                }
+                
+                // Update button states
+                document.querySelectorAll('.tool-btn[data-tool]').forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-pressed', 'false');
+                });
+                
+                if (!toolType) { 
+                    setStatus('ready', 'Ready'); 
+                    return; 
+                }
+                
+                // Activate selected tool button
+                const activeBtn = document.querySelector(`[data-tool="${toolType}"]`);
+                if (activeBtn) {
+                    activeBtn.classList.add('active');
+                    activeBtn.setAttribute('aria-pressed', 'true');
+                }
+                
+                // Configure geometry function for special types
                 const geometryFunction = toolType === 'Box' ? ol.interaction.Draw.createBox() : undefined;
                 const type = (toolType === 'Box' || toolType === 'Circle') ? 'Circle' : toolType;
-                State.drawInteraction = new ol.interaction.Draw({ source: State.drawSource, type: type, geometryFunction: geometryFunction });
+                
+                // Create draw interaction
+                State.drawInteraction = new ol.interaction.Draw({ 
+                    source: State.drawSource, 
+                    type: type, 
+                    geometryFunction: geometryFunction 
+                });
+                
                 State.drawInteraction.on('drawstart', () => setStatus('drawing', 'Drawing...'));
                 State.drawInteraction.on('drawend', (e) => {
                     State.featureHistory.push(e.feature);
@@ -576,61 +938,138 @@
                     sendToJotForm();
                     sendKmlToParent();
                 });
+                
                 State.map.addInteraction(State.drawInteraction);
                 setStatus('ready', `${toolType} active`);
             }
 
+            // ================================================================
+            // STATUS MANAGEMENT
+            // ================================================================
+            
+            /**
+             * Update status indicator and text
+             * @param {string} status - Status type ('ready', 'drawing')
+             * @param {string} text - Status message
+             */
             function setStatus(status, text) {
                 const dot = document.getElementById('statusDot');
                 dot.className = `status-dot ${status}`;
                 document.getElementById('statusText').textContent = text;
             }
 
+            // ================================================================
+            // LAYER SWITCHING
+            // ================================================================
+            
+            /**
+             * Switch visible map layer
+             * @param {string} layerName - Layer to show ('osm', 'satellite', 'ortho')
+             */
             function switchLayer(layerName) {
-                document.querySelectorAll('.layer-btn').forEach(b => { b.classList.toggle('active', b.dataset.layer === layerName); });
-                State.map.getLayers().forEach(lyr => { if (lyr.get('name')) lyr.setVisible(lyr.get('name') === layerName); });
-            }
-
-            function clearFeatures() {
-                if (State.drawSource.getFeatures().length === 0) return;
-                Modal.show('Clear All Features?', 'This will remove all shapes you have drawn. This action cannot be undone.', 'Clear All', 'danger', () => {
-                    State.drawSource.clear();
-                    State.featureHistory = [];
-                    sendToJotForm();
-                    sendKmlToParent();
-                    setStatus('ready', 'Canvas cleared');
+                // Update button states
+                document.querySelectorAll('.layer-btn').forEach(b => { 
+                    const isActive = b.dataset.layer === layerName;
+                    b.classList.toggle('active', isActive);
+                    b.setAttribute('aria-pressed', isActive);
+                });
+                
+                // Update layer visibility
+                State.map.getLayers().forEach(lyr => { 
+                    if (lyr.get('name')) {
+                        lyr.setVisible(lyr.get('name') === layerName); 
+                    }
                 });
             }
 
+            // ================================================================
+            // FEATURE MANAGEMENT
+            // ================================================================
+            
+            /**
+             * Clear all drawn features with confirmation
+             */
+            function clearFeatures() {
+                if (State.drawSource.getFeatures().length === 0) return;
+                
+                Modal.show(
+                    'Clear All Features?', 
+                    'This will remove all shapes you have drawn. This action cannot be undone.', 
+                    'Clear All', 
+                    'danger', 
+                    () => {
+                        State.drawSource.clear();
+                        State.featureHistory = [];
+                        sendToJotForm();
+                        sendKmlToParent();
+                        setStatus('ready', 'Canvas cleared');
+                    }
+                );
+            }
+
+            // ================================================================
+            // FULLSCREEN MODE
+            // ================================================================
+            
+            /**
+             * Toggle fullscreen mode with confirmation
+             */
             function toggleFullscreen() {
                 const doc = document.documentElement;
+                
                 if (!document.fullscreenElement) {
-                    Modal.show('Enter Fullscreen Mode?', 'This will maximize the map. You can exit by pressing ESC.', 'Go Fullscreen', 'primary', () => {
-                        if (doc.requestFullscreen) doc.requestFullscreen();
-                        else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-                        else if (doc.msRequestFullscreen) doc.msRequestFullscreen();
-                    });
+                    Modal.show(
+                        'Enter Fullscreen Mode?', 
+                        'This will maximize the map. You can exit by pressing ESC.', 
+                        'Go Fullscreen', 
+                        'primary', 
+                        () => {
+                            if (doc.requestFullscreen) doc.requestFullscreen();
+                            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+                            else if (doc.msRequestFullscreen) doc.msRequestFullscreen();
+                        }
+                    );
                 } else {
                     if (document.exitFullscreen) document.exitFullscreen();
                     else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
                 }
             }
 
+            /**
+             * Update UI when fullscreen state changes
+             */
             function updateFullscreenUI() {
                 const isFs = !!document.fullscreenElement;
                 document.getElementById('icon-maximize').style.display = isFs ? 'none' : 'block';
                 document.getElementById('icon-minimize').style.display = isFs ? 'block' : 'none';
                 document.getElementById('fullscreenToggle').title = isFs ? "Exit Fullscreen" : "Toggle Fullscreen";
+                
+                // Update map size after transition
                 setTimeout(() => State.map && State.map.updateSize(), 200);
             }
 
+            // ================================================================
+            // KML GENERATION
+            // ================================================================
+            
+            // JotForm integration parameters
             const qid = getUrlParam('qid');
             const inJotForm = (window.self !== window.top) && qid;
 
+            /**
+             * Generate KML string from drawn features
+             * @returns {string} KML formatted string
+             */
             function generateKMLString() {
                 const features = State.drawSource.getFeatures();
                 if (!features.length) return '';
-                const format = new ol.format.KML({ extractStyles: false, writeStyles: true });
+                
+                const format = new ol.format.KML({ 
+                    extractStyles: false, 
+                    writeStyles: true 
+                });
+                
+                // Clone features and transform to geographic coordinates
                 const featuresClone = features.map(f => {
                     const clone = f.clone();
                     let geom = clone.getGeometry();
@@ -641,19 +1080,31 @@
                         clone.setGeometry(geom);
                     }
                     
+                    // Transform from Web Mercator to WGS84
                     geom.transform('EPSG:3857', 'EPSG:4326');
+                    
+                    // Apply consistent styling
                     clone.setStyle(new ol.style.Style({
                         fill: new ol.style.Fill({ color: [239, 186, 10, 0.3] }),
                         stroke: new ol.style.Stroke({ color: [239, 186, 10, 1], width: 2 })
                     }));
+                    
                     return clone;
                 });
+                
                 return format.writeFeatures(featuresClone);
             }
 
+            /**
+             * Download KML file to user's device
+             */
             function downloadKML() {
                 const kml = generateKMLString();
-                if (!kml) { setStatus('ready', 'Nothing to download'); return; }
+                if (!kml) { 
+                    setStatus('ready', 'Nothing to download'); 
+                    return; 
+                }
+                
                 const blob = new Blob([kml], {type: 'application/vnd.google-earth.kml+xml'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -666,29 +1117,58 @@
                 setStatus('ready', 'Download started');
             }
 
+            // ================================================================
+            // PARENT FRAME COMMUNICATION
+            // ================================================================
+            
+            /**
+             * Send KML data to parent frame
+             */
+            function sendKmlToParent() {
+                const kml = generateKMLString();
+                if (inIframe) {
+                    window.parent.postMessage(JSON.stringify({
+                        type: 'kmlData',
+                        kml: kml,
+                        featureCount: State.drawSource.getFeatures().length,
+                        timestamp: new Date().toISOString()
+                    }), '*');
+                }
+            }
+
+            /**
+             * Send data to JotForm parent (legacy support)
+             */
             function sendToJotForm() {
                 if (!inJotForm) return;
                 const kml = generateKMLString();
-                window.parent.postMessage(JSON.stringify({ type: 'data', qid: qid, value: kml, valid: true }), '*');
+                window.parent.postMessage(JSON.stringify({ 
+                    type: 'data', 
+                    qid: qid, 
+                    value: kml, 
+                    valid: true 
+                }), '*');
             }
 
-            // Handle messages from parent
+            /**
+             * Set up listener for messages from parent frame
+             */
             function setupParentCommunication() {
                 window.addEventListener('message', function(e) {
                     try {
                         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
                         
-                        // Handle site change from parent
+                        // Handle site change request
                         if (data.type === 'changeSite' && data.site) {
                             changeSite(data.site);
                         }
                         
-                        // Handle KML request from parent
+                        // Handle KML request
                         if (data.type === 'getKml') {
                             sendKmlToParent();
                         }
 
-                        // JotForm submit handling
+                        // Handle JotForm submit
                         if (data.type === 'submit' && inJotForm) {
                             const kml = generateKMLString();
                             window.parent.postMessage(JSON.stringify({
@@ -699,16 +1179,30 @@
                             }), '*');
                         }
                     } catch (err) {
-                        // Ignore parse errors from other messages
+                        // Ignore parse errors from other window messages
                     }
                 });
             }
 
+            // ================================================================
+            // INITIALIZATION
+            // ================================================================
+            
+            /**
+             * Initialize widget and set up all event handlers
+             */
             function init() {
+                // Initialize OpenLayers map
                 initMap();
+                
+                // Tool button click handlers
                 document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
-                    btn.addEventListener('click', () => setTool(btn.classList.contains('active') ? null : btn.dataset.tool));
+                    btn.addEventListener('click', () => {
+                        setTool(btn.classList.contains('active') ? null : btn.dataset.tool);
+                    });
                 });
+                
+                // Action button handlers
                 document.getElementById('undoBtn').addEventListener('click', () => {
                     if (State.featureHistory.length) { 
                         State.drawSource.removeFeature(State.featureHistory.pop()); 
@@ -716,23 +1210,33 @@
                         sendKmlToParent();
                     }
                 });
+                
                 document.getElementById('clearBtn').addEventListener('click', clearFeatures);
                 document.getElementById('downloadBtn').addEventListener('click', downloadKML);
+                
+                // Layer button handlers
                 document.querySelectorAll('.layer-btn').forEach(btn => {
                     btn.addEventListener('click', () => switchLayer(btn.dataset.layer));
                 });
+                
+                // Fullscreen handlers
                 document.getElementById('fullscreenToggle').addEventListener('click', toggleFullscreen);
                 document.addEventListener('fullscreenchange', updateFullscreenUI);
-                document.getElementById('modalCancel').addEventListener('click', () => Modal.hide());
-                document.getElementById('genericModal').addEventListener('click', (e) => { if(e.target.id === 'genericModal') Modal.hide(); });
                 
+                // Modal cancel handler
+                document.getElementById('modalCancel').addEventListener('click', () => Modal.hide());
+                document.getElementById('genericModal').addEventListener('click', (e) => { 
+                    if(e.target.id === 'genericModal') Modal.hide(); 
+                });
+                
+                // Window resize handler (debounced)
                 let resizeTimer;
                 window.addEventListener('resize', () => {
                     clearTimeout(resizeTimer);
                     resizeTimer = setTimeout(() => State.map && State.map.updateSize(), 100);
                 });
 
-                // Setup parent communication for both JotForm and our form
+                // Set up parent frame communication
                 setupParentCommunication();
 
                 // Notify parent that widget is ready
@@ -743,11 +1247,15 @@
 
                 // JotForm specific initialization
                 if (inJotForm) { 
-                    window.parent.postMessage(JSON.stringify({ type: 'frameReady', qid: qid }), '*');
+                    window.parent.postMessage(JSON.stringify({ 
+                        type: 'frameReady', 
+                        qid: qid 
+                    }), '*');
                     sendToJotForm();
                 }
             }
 
+            // Start initialization
             init();
         })();
     </script>

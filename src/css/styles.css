@@ -1,14 +1,44 @@
+/**
+ * Mission Request Portal - Main Stylesheet
+ * =========================================
+ * 
+ * A comprehensive CSS framework for the drone mission request portal.
+ * Implements a modern, accessible design system with JotForm-inspired aesthetics.
+ * 
+ * Architecture:
+ * - CSS Custom Properties (Variables) for theming consistency
+ * - Mobile-first responsive design with progressive enhancement
+ * - Component-based organization for maintainability
+ * 
+ * Color Palette:
+ * - Primary: Navy (#0F2458) - Brand identity, headers, text
+ * - Accent: Cyan (#0ABAEF) - Interactive elements, highlights
+ * - Supporting: Pink, Orange, Yellow, Green - Status indicators
+ * 
+ * @version 2.0.0
+ * @author RocketDNA Development Team
+ */
+
+/* ==========================================================================
+   1. CSS CUSTOM PROPERTIES (Design Tokens)
+   ========================================================================== */
+
 :root {
+    /* Brand Colors */
     --navy: #0F2458;
     --blue-mid: #5381A1;
     --cyan: #0ABAEF;
     --light-bg: #F4F7FA;
     --white: #ffffff;
+    
+    /* Accent Colors */
     --pink: #E92F8B;
     --orange: #E76F41;
     --yellow: #FEE980;
     --green: #10B981;
     --red: #EF4444;
+    
+    /* Neutral Palette - Gray Scale */
     --gray-100: #F3F4F6;
     --gray-200: #E5E7EB;
     --gray-300: #D1D5DB;
@@ -16,13 +46,21 @@
     --gray-500: #6B7280;
     --gray-600: #4B5563;
     --gray-700: #374151;
+    
+    /* Elevation - Box Shadows */
     --shadow-sm: 0 1px 2px rgba(15, 36, 88, 0.05);
     --shadow-md: 0 4px 6px rgba(15, 36, 88, 0.07);
     --shadow-lg: 0 10px 25px rgba(15, 36, 88, 0.1);
+    
+    /* Border Radii - Consistent rounding */
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 16px;
 }
+
+/* ==========================================================================
+   2. CSS RESET & BASE STYLES
+   ========================================================================== */
 
 * {
     margin: 0;
@@ -41,7 +79,10 @@ body {
     min-height: 100vh;
 }
 
-/* App Container - Matching JotForm Style */
+/* ==========================================================================
+   3. LAYOUT COMPONENTS
+   ========================================================================== */
+
 .app-container {
     min-height: 100vh;
     display: flex;
@@ -49,7 +90,6 @@ body {
     padding: 20px;
 }
 
-/* Header */
 .app-header {
     background: transparent;
     color: var(--white);
@@ -88,7 +128,16 @@ body {
     display: none;
 }
 
-/* Main Content - JotForm Style Container */
+.company-logo {
+    max-height: 32px;
+    max-width: 150px;
+    object-fit: contain;
+}
+
+/**
+ * Main Content Container
+ * Glassmorphism-inspired card with backdrop blur effect.
+ */
 .main-content {
     flex: 1;
     max-width: 800px;
@@ -102,7 +151,10 @@ body {
     padding: 30px !important;
 }
 
-/* Form Sections - More Compact */
+/* ==========================================================================
+   4. FORM SECTIONS
+   ========================================================================== */
+
 .form-section {
     background: transparent;
     border-radius: var(--radius-sm);
@@ -138,7 +190,10 @@ body {
     font-weight: 600;
 }
 
-/* Form Grid - More Compact */
+/* ==========================================================================
+   5. FORM GRID & FIELDS
+   ========================================================================== */
+
 .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -163,7 +218,6 @@ body {
     margin-bottom: 4px;
 }
 
-/* Form Inputs - JotForm Style */
 .form-group input,
 .form-group select,
 .form-group textarea {
@@ -199,7 +253,7 @@ body {
     min-height: 100px;
 }
 
-/* Custom Select Arrow */
+/* Custom select arrow using embedded SVG data URI */
 .form-group select {
     appearance: none;
     -webkit-appearance: none;
@@ -211,7 +265,10 @@ body {
     padding-right: 35px !important;
 }
 
-/* Request Type Toggle - Radio Style */
+/* ==========================================================================
+   6. REQUEST TYPE TOGGLE (Radio Button Cards)
+   ========================================================================== */
+
 .request-type-toggle {
     display: flex;
     gap: 12px;
@@ -258,7 +315,10 @@ input[type="radio"]:checked + .toggle-option svg {
     color: var(--cyan);
 }
 
-/* Custom Radio/Checkbox Styling */
+/* ==========================================================================
+   7. CUSTOM RADIO & CHECKBOX STYLING
+   ========================================================================== */
+
 .form-radio-item,
 .form-checkbox-item {
     background-color: rgba(255, 255, 255, 0.9) !important;
@@ -287,7 +347,6 @@ input[type="radio"]:checked + .toggle-option svg {
     padding-top: 2px !important;
 }
 
-/* Custom radio/checkbox indicator */
 .form-radio-item input[type="radio"],
 .form-checkbox-item input[type="checkbox"] {
     appearance: none !important;
@@ -311,7 +370,6 @@ input[type="radio"]:checked + .toggle-option svg {
     border-radius: 4px !important;
 }
 
-/* Checked state */
 .form-radio-item input[type="radio"]:checked,
 .form-checkbox-item input[type="checkbox"]:checked {
     background-color: #0ABAEF !important;
@@ -319,9 +377,8 @@ input[type="radio"]:checked + .toggle-option svg {
     box-shadow: 0 0 0 2px rgba(10, 186, 239, 0.2) !important;
 }
 
-/* Checkmark for checkbox */
 .form-checkbox-item input[type="checkbox"]:checked::before {
-    content: "Ã¢Å“â€œ" !important;
+    content: "✓" !important;
     color: white !important;
     font-size: 14px !important;
     font-weight: bold !important;
@@ -331,7 +388,6 @@ input[type="radio"]:checked + .toggle-option svg {
     transform: translate(-50%, -50%) !important;
 }
 
-/* Dot for radio */
 .form-radio-item input[type="radio"]:checked::before {
     content: "" !important;
     width: 8px !important;
@@ -344,7 +400,7 @@ input[type="radio"]:checked + .toggle-option svg {
     transform: translate(-50%, -50%) !important;
 }
 
-/* Checkbox Label */
+/* Checkbox Label Component */
 .checkbox-label {
     display: flex;
     align-items: center;
@@ -386,7 +442,10 @@ input[type="radio"]:checked + .toggle-option svg {
     margin-bottom: 2px;
 }
 
-/* Parameters Grid */
+/* ==========================================================================
+   8. PARAMETERS GRID & MAP SECTION
+   ========================================================================== */
+
 .params-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -398,7 +457,6 @@ input[type="radio"]:checked + .toggle-option svg {
     border: 1px solid rgba(10, 186, 239, 0.2);
 }
 
-/* Map Section */
 .map-section {
     margin-top: 20px;
     padding: 15px;
@@ -420,7 +478,6 @@ input[type="radio"]:checked + .toggle-option svg {
     margin-bottom: 12px;
 }
 
-/* Map Widget Container */
 .map-widget-container {
     position: relative;
     width: 100%;
@@ -437,7 +494,10 @@ input[type="radio"]:checked + .toggle-option svg {
     border: none;
 }
 
-/* File Upload - JotForm Style */
+/* ==========================================================================
+   9. FILE UPLOAD COMPONENT
+   ========================================================================== */
+
 .file-upload-area {
     display: flex;
     flex-direction: column;
@@ -479,7 +539,6 @@ input[type="radio"]:checked + .toggle-option svg {
     color: var(--gray-400);
 }
 
-/* File List */
 .file-list {
     display: flex;
     flex-direction: column;
@@ -526,7 +585,25 @@ input[type="radio"]:checked + .toggle-option svg {
     color: var(--red);
 }
 
-/* Form Actions */
+/* File upload status indicators */
+.file-item.uploading {
+    opacity: 0.7;
+    border-left: 3px solid var(--cyan);
+}
+
+.file-item.uploaded {
+    border-left: 3px solid var(--green);
+}
+
+.file-item.error {
+    border-left: 3px solid var(--red);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+/* ==========================================================================
+   10. FORM ACTIONS & SUBMIT BUTTON
+   ========================================================================== */
+
 .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -574,7 +651,10 @@ input[type="radio"]:checked + .toggle-option svg {
     to { transform: rotate(360deg); }
 }
 
-/* Modals */
+/* ==========================================================================
+   11. MODAL COMPONENTS
+   ========================================================================== */
+
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -656,7 +736,10 @@ input[type="radio"]:checked + .toggle-option svg {
     background: var(--blue-mid);
 }
 
-/* Priority Tooltip - New Design */
+/* ==========================================================================
+   12. PRIORITY TOOLTIP COMPONENT
+   ========================================================================== */
+
 .priority-help-container {
     margin-top: 8px;
     position: relative;
@@ -766,26 +849,11 @@ input[type="radio"]:checked + .toggle-option svg {
     color: white;
 }
 
-.priority-1 {
-    background-color: var(--red);
-}
-
-.priority-2 {
-    background-color: var(--orange);
-}
-
-.priority-3 {
-    background-color: var(--yellow);
-    color: var(--navy);
-}
-
-.priority-4 {
-    background-color: var(--green);
-}
-
-.priority-5 {
-    background-color: var(--cyan);
-}
+.priority-1 { background-color: var(--red); }
+.priority-2 { background-color: var(--orange); }
+.priority-3 { background-color: var(--yellow); color: var(--navy); }
+.priority-4 { background-color: var(--green); }
+.priority-5 { background-color: var(--cyan); }
 
 .priority-title {
     font-size: 13px;
@@ -825,8 +893,7 @@ input[type="radio"]:checked + .toggle-option svg {
     margin: 0;
 }
 
-
-/* Priority dropdown styling - colored text on white background */
+/* Priority dropdown option styling */
 #missionPriority option,
 #repeatMissionPriority option {
     background-color: var(--white);
@@ -868,80 +935,9 @@ input[type="radio"]:checked + .toggle-option svg {
     font-weight: 600;
 }
 
-
-/* Responsive */
-@media (max-width: 768px) {
-    .app-container {
-        padding: 10px;
-    }
-
-    .main-content {
-        padding: 20px !important;
-    }
-    
-    .form-section {
-        padding: 15px 0;
-    }
-    
-    .form-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-    
-    .request-type-toggle {
-        flex-direction: column;
-    }
-    
-    .map-widget-container {
-        height: 500px;
-    }
-    
-    .submit-btn {
-        width: 100%;
-        padding: 14px 24px;
-    }
-    
-    .company-badge {
-        display: none;
-    }
-    
-    .logo {
-        font-size: 16px;
-    }
-    
-    .params-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .priority-tooltip {
-        max-width: 300px;
-    }
-}
-
-@media (max-width: 480px) {
-    .main-content {
-        padding: 15px !important;
-    }
-    
-    .section-title {
-        font-size: 16px;
-    }
-
-    .section-number {
-        width: 28px;
-        height: 28px;
-        font-size: 12px;
-    }
-
-    .priority-tooltip {
-        max-width: 280px;
-        padding: 15px;
-    }
-}
-
-/* ============================================================
-   REPEAT MISSIONS TABLE
-   ============================================================ */
+/* ==========================================================================
+   13. REPEAT MISSIONS TABLE
+   ========================================================================== */
 
 .repeat-missions-table-container {
     background: rgba(255, 255, 255, 0.7);
@@ -1070,8 +1066,57 @@ input[type="radio"]:checked + .toggle-option svg {
     border-color: var(--cyan);
 }
 
-/* Responsive adjustments for repeat missions table */
+/* ==========================================================================
+   14. RESPONSIVE DESIGN
+   ========================================================================== */
+
 @media (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+    }
+
+    .main-content {
+        padding: 20px !important;
+    }
+    
+    .form-section {
+        padding: 15px 0;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .request-type-toggle {
+        flex-direction: column;
+    }
+    
+    .map-widget-container {
+        height: 500px;
+    }
+    
+    .submit-btn {
+        width: 100%;
+        padding: 14px 24px;
+    }
+    
+    .company-badge {
+        display: none;
+    }
+    
+    .logo {
+        font-size: 16px;
+    }
+    
+    .params-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .priority-tooltip {
+        max-width: 300px;
+    }
+
     .repeat-missions-table thead {
         display: none;
     }
@@ -1115,23 +1160,24 @@ input[type="radio"]:checked + .toggle-option svg {
         margin-top: 8px;
     }
 }
-.company-logo {
-    max-height: 32px;
-    max-width: 150px;
-    object-fit: contain;
-}
 
-/* File Upload Status */
-.file-item.uploading {
-    opacity: 0.7;
-    border-left: 3px solid var(--cyan);
-}
+@media (max-width: 480px) {
+    .main-content {
+        padding: 15px !important;
+    }
+    
+    .section-title {
+        font-size: 16px;
+    }
 
-.file-item.uploaded {
-    border-left: 3px solid var(--green);
-}
+    .section-number {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
 
-.file-item.error {
-    border-left: 3px solid var(--red);
-    background: rgba(239, 68, 68, 0.05);
+    .priority-tooltip {
+        max-width: 280px;
+        padding: 15px;
+    }
 }
