@@ -8,7 +8,7 @@ const COMPANY_CONFIG = {
     'BMA': {
         name: 'BMA',
         displayName: 'BHP Mitsubishi Alliance',
-        logo: 'https://your-domain.com/logos/norton-logo.png',
+        logo: 'https://github.com/Ciaran1211/mission-request-portal/blob/main/src/logos/BMA_Logo.png',
         sites: {
             'SR': {
                 name: 'Saraji',
@@ -121,6 +121,7 @@ const COMPANY_CONFIG = {
     'Goldfields': {
         name: 'Goldfields',
         displayName: 'Goldfields',
+        logo: 'https://github.com/Ciaran1211/mission-request-portal/blob/main/src/logos/gold-fields-logo.svg',
         sites: {
             'GY': {
                 name: 'Gruyere',
