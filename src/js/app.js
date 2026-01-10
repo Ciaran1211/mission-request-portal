@@ -21,7 +21,7 @@
     // ============================================================
     // Power Automate HTTP trigger endpoint for file uploads
     // TO SETUP: Create HTTP trigger flow, then paste the URL here
-    const FILE_UPLOAD_ENDPOINT = 'YOUR_POWER_AUTOMATE_HTTP_URL';
+    const FILE_UPLOAD_ENDPOINT = 'https://default0d0ae4136f89412e8ba95ea4efeb79.81.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/06e7553c7ba54e239d91319adf12a337/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=G4qLLP60bZw6guaEKK-rWGI-33t6iW30LVQCsIUQd0k';
     // Example: 'https://prod-00.eastus.logic.azure.com:443/workflows/.../triggers/manual/paths/invoke?...'
 
     // ============================================================
@@ -482,7 +482,7 @@
     // Upload file to Power Automate HTTP trigger
     async function uploadFileToPowerAutomate(fileName, base64Content, missionRef, fileType) {
         // Check if endpoint is configured
-        if (!FILE_UPLOAD_ENDPOINT || FILE_UPLOAD_ENDPOINT === 'https://default0d0ae4136f89412e8ba95ea4efeb79.81.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/06e7553c7ba54e239d91319adf12a337/triggers/manual/paths/invoke?api-version=1') {
+        if (!FILE_UPLOAD_ENDPOINT || FILE_UPLOAD_ENDPOINT === 'YOUR_POWER_AUTOMATE_HTTP_URL') {
             throw new Error('File upload endpoint not configured. Please set FILE_UPLOAD_ENDPOINT in app.js');
         }
 
